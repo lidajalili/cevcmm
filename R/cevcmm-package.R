@@ -1,0 +1,21 @@
+#' cevcmm: Communication-Efficient Varying Coefficient Mixed-Effects Models
+#'
+#' Scalable inference for Varying Coefficient Mixed-Effects Models
+#' (VCMMs) with large, correlated random effects. The package implements:
+#'
+#' * Sufficient-statistics (SS) iterative estimator (Algorithm 1).
+#' * One-step communication-efficient surrogate likelihood (CSL) estimator.
+#' * SVD-stabilized variants for ill-conditioned random-effect Gram matrices.
+#' * Kronecker and separable covariance structures for origin-destination
+#'   and group-shared random effects.
+#'
+#' The package is in early development. See the project ROADMAP for the
+#' current status.
+#'
+#' @references
+#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
+#' Applications.
+#'
+#' @keywords internal
+"_PACKAGE"
