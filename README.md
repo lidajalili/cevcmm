@@ -2,7 +2,7 @@
 
 > Communication-Efficient Varying Coefficient Mixed-Effects Models
 
-[![R-CMD-check](https://img.shields.io/badge/R--CMD--check-pending-lightgrey)](https://github.com/REPLACE_USER/cevcmm)
+[![R-CMD-check](https://img.shields.io/badge/R--CMD--check-pending-lightgrey)](https://github.com/lidajalili/cevcmm)
 [![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html)
 
 Scalable inference for Varying Coefficient Mixed-Effects Models with
@@ -21,7 +21,7 @@ Not yet available. Once v0.1.0 is released:
 
 ```r
 # install.packages("devtools")
-devtools::install_github("REPLACE_USER/cevcmm")
+devtools::install_github("lidajalili/cevcmm")
 ```
 
 ## Reference
