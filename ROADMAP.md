@@ -11,8 +11,8 @@ Commit this file at the end of every working day.
 
 | Day | Status | Deliverable | Done when |
 |----:|:------:|-------------|-----------|
-| 1   | 🚧     | Package skeleton: `DESCRIPTION`, `NAMESPACE`, `.Rbuildignore`, `.gitignore`, `R/cevcmm-package.R`, git init, GitHub repo | `R CMD check` runs with 0 errors |
-| 2   | ⬜     | `R/sufficient_stats.R`, `R/penalty.R`, `R/svd_stable.R` refactored from current modules with roxygen docs | All three load via `devtools::load_all()` |
+| 1   |  ✅   | Package skeleton: `DESCRIPTION`, `NAMESPACE`, `.Rbuildignore`, `.gitignore`, `R/cevcmm-package.R`, git init, GitHub repo | `R CMD check` runs with 0 errors |
+| 2   | ⬜  🚧 | `R/sufficient_stats.R`, `R/penalty.R`, `R/svd_stable.R` refactored from current modules with roxygen docs | All three load via `devtools::load_all()` |
 | 3   | ⬜     | `R/ss_estimator.R` refactored; `vcmm_control()` options object | SS gives a numeric result on tiny data |
 | 4   | ⬜     | `R/csl_estimator.R` refactored; pilot logic clean | CSL gives same first-order behavior as SS |
 | 5   | ⬜     | `R/design.R` — explicit-spec interface `vcmm(y, X, Z, t, group)` (formula sugar deferred to v0.2) | Three test specs run end-to-end |
