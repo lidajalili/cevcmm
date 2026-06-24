@@ -198,6 +198,7 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
 
 #' @rdname fit_ss
 #' @param x A \code{vcmm_fit} object.
+#' @param ... Unused; present for S3 method consistency.
 #' @export
 print.vcmm_fit <- function(x, ...) {
   cat("<vcmm_fit>  Varying Coefficient Mixed-Effects Model fit\n")

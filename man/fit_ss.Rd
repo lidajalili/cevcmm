@@ -24,6 +24,8 @@ containing the aggregated sufficient statistics.}
 
 \item{x}{A \code{vcmm_fit} object.}
 
+\item{...}{Unused; present for S3 method consistency.}
+
 \item{object}{A \code{vcmm_fit} object.}
 }
 \value{
