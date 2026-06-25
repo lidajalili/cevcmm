@@ -206,11 +206,28 @@ print.vcmm_fit <- function(x, ...) {
   cat(sprintf("  n_obs       : %d\n", x$n_obs))
   cat(sprintf("  p (fixed)   : %d\n", x$p))
   cat(sprintf("  q (random)  : %d\n", x$q))
-  cat(sprintf("  iterations  : %d %s\n", x$iterations,
-              if (x$converged) "(converged)" else "(NOT converged)"))
+
+  if (identical(x$method, "CSL") && !is.null(x$pilot)) {
+    cat(sprintf("  pilot iter  : %d (%s)\n",
+                x$pilot$iterations,
+                if (x$pilot$converged) "converged" else "loose"))
+    cat(sprintf("  newton step : 1\n"))
+  } else {
+    cat(sprintf("  iterations  : %d %s\n", x$iterations,
+                if (x$converged) "(converged)" else "(NOT converged)"))
+  }
+
   cat(sprintf("  sigma_eps   : %.4f\n", x$sigma_eps))
   cat(sprintf("  sigma_alpha : %.4f\n", x$sigma_alpha))
-  cat(sprintf("  elapsed     : %.4f sec\n", x$elapsed_sec))
+
+  if (identical(x$method, "CSL") &&
+      !is.null(x$pilot_elapsed_sec) && !is.null(x$step_elapsed_sec)) {
+    cat(sprintf("  elapsed     : %.4f sec (pilot %.4fs + newton %.4fs)\n",
+                x$elapsed_sec, x$pilot_elapsed_sec, x$step_elapsed_sec))
+  } else {
+    cat(sprintf("  elapsed     : %.4f sec\n", x$elapsed_sec))
+  }
+
   invisible(x)
 }
 
