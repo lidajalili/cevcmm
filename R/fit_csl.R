@@ -63,6 +63,12 @@
 #' @param pilot_tol_alpha Positive numeric. Loose tolerance for the
 #'   internal SS pilot (default 1e-3). Ignored if \code{pilot} is
 #'   supplied.
+#' @param re_cov_state Optional. An internal random-effects covariance
+#'   state object (NULL for diagonal, or constructed for kronecker via
+#'   \code{vcmm()} with \code{re_cov = "kronecker"}). Passed through to
+#'   the internal SS pilot and reused for the Newton-step Hessian.
+#'   Advanced users typically reach \code{re_cov_state} via
+#'   \code{vcmm()} rather than calling \code{fit_csl()} directly.
 #'
 #' @return A list of class \code{"vcmm_fit"} with the same fields as
 #'   \code{fit_ss()}, plus:
@@ -115,7 +121,8 @@ fit_csl <- function(stats,
                     pilot           = NULL,
                     pilot_max_iter  = 5L,
                     pilot_tol_beta  = 1e-3,
-                    pilot_tol_alpha = 1e-3) {
+                    pilot_tol_alpha = 1e-3,
+                    re_cov_state    = NULL) {
 
   # --- Input validation ---------------------------------------------------
   if (!(inherits(stats, "vcmm_ss") || inherits(stats, "vcmm_accumulator"))) {
@@ -162,7 +169,12 @@ fit_csl <- function(stats,
       cat(sprintf("  [CSL] Phase 1: internal SS pilot (max_iter=%d, tol=%.0e)\n",
                   pilot_max_iter, pilot_tol_beta))
     }
-    pilot <- fit_ss(stats, penalty, pilot_ctrl)
+    pilot <- fit_ss(stats, penalty, pilot_ctrl, re_cov_state = re_cov_state)
+
+    # If the pilot updated the re_cov_state (via update_variance), inherit it
+    if (!is.null(pilot$re_cov_state)) {
+      re_cov_state <- pilot$re_cov_state
+    }
   } else {
     if (!inherits(pilot, "vcmm_fit")) {
       stop("`pilot` must be a 'vcmm_fit' object (e.g. from fit_ss()).",
@@ -199,12 +211,15 @@ fit_csl <- function(stats,
   sigma_alpha <- pilot$sigma_alpha
   se2 <- sigma_eps^2
   sa2 <- sigma_alpha^2
-  ridge_alpha <- se2 / sa2
+
+  ## Prior precision for alpha (diag or kronecker, depending on re_cov_state)
+  prior_precision <- .build_prior_precision(re_cov_state, sigma_eps,
+                                            sigma_alpha, q)
 
   ## Gradient at (beta_0, alpha_0) using FULL stats.
   ## Form matches the implicit loss minimised by fit_ss():
   ##   L = -(1/2 se2) ( ||y - X beta - Z alpha||^2 + beta' P beta )
-  ##       - (1/2 sa2) alpha' alpha
+  ##       - (1/2) alpha' Sigma_alpha^{-1} alpha
   ## After multiplying through by se2 (the Newton direction is invariant),
   ## the working gradient and Hessian are:
   g_beta  <- as.vector((stats$C + penalty) %*% beta_0) +
@@ -213,13 +228,13 @@ fit_csl <- function(stats,
   g_alpha <- as.vector(crossprod(stats$XtZ, beta_0)) +
              as.vector(stats$ZtZ %*% alpha_0) -
              as.vector(stats$Zty) +
-             ridge_alpha * alpha_0
+             as.vector(prior_precision %*% alpha_0)
   g_vec <- c(g_beta, g_alpha)
 
   ## Hessian (full aggregated, prior-augmented), in the same parametrisation
   V_bb <- stats$C   + penalty
   V_ba <- stats$XtZ
-  V_aa <- stats$ZtZ + ridge_alpha * diag(q)
+  V_aa <- stats$ZtZ + prior_precision
   K <- rbind(cbind(V_bb,   V_ba),
              cbind(t(V_ba), V_aa))
   K <- (K + t(K)) / 2   # enforce symmetry numerically
@@ -231,7 +246,7 @@ fit_csl <- function(stats,
   beta_csl  <- beta_0  - step[seq_len(p)]
   alpha_csl <- alpha_0 - step[seq.int(p + 1L, p + q)]
 
-  ## Optional post-step variance update (same formulas as fit_ss())
+  ## Optional post-step variance / covariance update (same M_eta rule as fit_ss)
   if (control$update_variance) {
     rss <- stats$a -
       2 * as.numeric(crossprod(beta_csl,  stats$b)) +
@@ -239,8 +254,13 @@ fit_csl <- function(stats,
       2 * as.numeric(crossprod(alpha_csl, stats$Zty)) +
       2 * as.numeric(crossprod(beta_csl,  stats$XtZ %*% alpha_csl)) +
           as.numeric(crossprod(alpha_csl, stats$ZtZ %*% alpha_csl))
-    sigma_eps   <- sqrt(max(rss / n_obs, 1e-8))
-    sigma_alpha <- sqrt(max(mean(alpha_csl^2), 1e-8))
+    sigma_eps <- sqrt(max(rss / n_obs, 1e-8))
+
+    if (is.null(re_cov_state) || identical(re_cov_state$type, "diag")) {
+      sigma_alpha <- sqrt(max(mean(alpha_csl^2), 1e-8))
+    } else {
+      re_cov_state <- .update_re_cov_state(re_cov_state, alpha_csl)
+    }
   }
 
   step_elapsed  <- as.numeric((proc.time() - start_step)["elapsed"])
@@ -268,6 +288,7 @@ fit_csl <- function(stats,
     pilot             = pilot,
     control           = control,
     K_inv             = K_inv,
+    re_cov_state      = re_cov_state,
     call              = match.call()
   )
   class(out) <- c("vcmm_fit", "list")

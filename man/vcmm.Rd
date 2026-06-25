@@ -11,6 +11,9 @@ vcmm(
   t,
   method = c("auto", "csl", "ss"),
   re_cov = c("diag", "kronecker", "separable"),
+  n_groups = NULL,
+  Sigma_2x2_init = NULL,
+  Sigma_spatial_init = NULL,
   n_basis = NULL,
   degree = 3L,
   lambda = 1,
@@ -26,7 +29,9 @@ vcmm(
 \eqn{K = 1}) of covariates that get varying coefficients in
 \code{t}.}
 
-\item{Z}{Numeric \eqn{n \times q} random-effects design matrix.}
+\item{Z}{Numeric \eqn{n \times q} random-effects design matrix.
+For \code{re_cov = "kronecker"}, \eqn{q} must equal
+\code{2 * n_groups}.}
 
 \item{t}{Numeric vector of length \eqn{n} in which the coefficients
 vary smoothly.}
@@ -34,9 +39,23 @@ vary smoothly.}
 \item{method}{Character: \code{"auto"} (default), \code{"csl"}, or
 \code{"ss"}. See Details.}
 
-\item{re_cov}{Character: random-effects covariance structure.
-Currently only \code{"diag"} is implemented; \code{"kronecker"}
-and \code{"separable"} are planned.}
+\item{re_cov}{Character: random-effects covariance structure;
+\code{"diag"} (default) or \code{"kronecker"}. See Details.}
+
+\item{n_groups}{Integer. Number of groups for
+\code{re_cov = "kronecker"} only. Must satisfy
+\code{ncol(Z) == 2 * n_groups}. Ignored otherwise.}
+
+\item{Sigma_2x2_init}{Optional 2 by 2 initial Sigma_2x2 (only used
+for \code{re_cov = "kronecker"}). Defaults to
+\code{sigma_alpha^2 * I_2}. With \code{update_variance = TRUE} the
+final estimate is data-driven; the initial value only affects
+iteration 1.}
+
+\item{Sigma_spatial_init}{Optional G by G initial Sigma_spatial
+(only used for \code{re_cov = "kronecker"}). Defaults to
+\code{I_G}. With \code{update_variance = TRUE} the final estimate
+is data-driven; the initial value only affects iteration 1.}
 
 \item{n_basis}{Integer or \code{NULL}. Number of B-spline basis
 functions per varying coefficient. \code{NULL} (default)
@@ -94,13 +113,28 @@ scale. SS is the exact-MLE benchmark and the cleaner choice for
 small problems. Use \code{method = "csl"} or \code{method = "ss"}
 to override.
 
-\strong{Random-effects covariance.} Currently only \code{re_cov =
-"diag"} (the \eqn{\alpha \sim N(0, \sigma_\alpha^2 I_q)}
-specification above) is supported. The other two options
-(\code{"kronecker"} for origin-destination data,
-\code{"separable"} for group-shared dense random effects) are
-planned for a later release and will currently raise an informative
-error.
+\strong{Random-effects covariance.} Two structures are supported:
+\itemize{
+\item \code{re_cov = "diag"} (default): \eqn{\alpha \sim N(0,
+    \sigma_\alpha^2 I_q)}. Smallest, fastest.
+\item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0, \Sigma_{2\times 2}
+    \otimes \Sigma_{\text{spatial}})} for origin-destination data.
+Each of \code{n_groups} districts has a 2-dimensional random
+effect (origin, destination), so \code{ncol(Z)} must equal
+\code{2 * n_groups}. When \code{control$update_variance = TRUE},
+the 2-by-2 origin-destination cross-effect covariance
+\code{Sigma_2x2} is re-estimated at every iteration from the
+column covariance of \code{matrix(alpha_hat, G, 2)}. The G-by-G
+spatial covariance \code{Sigma_spatial} is \strong{held fixed}
+at the user-supplied initial value (default \code{I_G}). The
+reason is identifiability: with a single \eqn{\hat\alpha}, the
+moment-based spatial estimator is rank-2 at most and iterating
+it is unstable. For real OD data, supply a parametric spatial
+kernel via \code{Sigma_spatial_init} (e.g.
+\code{exp(-D / phi)} for a known distance matrix \code{D}).
+}
+(A third option, \code{"separable"} for group-shared dense random
+effects, is planned for a later release.)
 }
 \examples{
 # ---- Single varying coefficient ---------------------------------------

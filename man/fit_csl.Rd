@@ -11,7 +11,8 @@ fit_csl(
   pilot = NULL,
   pilot_max_iter = 5L,
   pilot_tol_beta = 0.001,
-  pilot_tol_alpha = 0.001
+  pilot_tol_alpha = 0.001,
+  re_cov_state = NULL
 )
 }
 \arguments{
@@ -39,6 +40,13 @@ supplied.}
 \item{pilot_tol_alpha}{Positive numeric. Loose tolerance for the
 internal SS pilot (default 1e-3). Ignored if \code{pilot} is
 supplied.}
+
+\item{re_cov_state}{Optional. An internal random-effects covariance
+state object (NULL for diagonal, or constructed for kronecker via
+\code{vcmm()} with \code{re_cov = "kronecker"}). Passed through to
+the internal SS pilot and reused for the Newton-step Hessian.
+Advanced users typically reach \code{re_cov_state} via
+\code{vcmm()} rather than calling \code{fit_csl()} directly.}
 }
 \value{
 A list of class \code{"vcmm_fit"} with the same fields as

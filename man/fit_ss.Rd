@@ -6,7 +6,7 @@
 \alias{coef.vcmm_fit}
 \title{Fit a VCMM via the sufficient-statistics estimator}
 \usage{
-fit_ss(stats, penalty, control = vcmm_control())
+fit_ss(stats, penalty, control = vcmm_control(), re_cov_state = NULL)
 
 \method{print}{vcmm_fit}(x, ...)
 
@@ -21,6 +21,14 @@ containing the aggregated sufficient statistics.}
 
 \item{control}{A \code{vcmm_control} object with fitting options. Pass
 \code{vcmm_control()} to use defaults.}
+
+\item{re_cov_state}{Optional. An internal random-effects covariance
+state object (NULL for diagonal, or constructed for kronecker via
+\code{vcmm()} with \code{re_cov = "kronecker"}). When NULL, the
+prior precision is \code{(sigma_eps^2 / sigma_alpha^2) * I_q}
+matching the diagonal case. Advanced users typically reach
+\code{re_cov_state} via \code{vcmm()} rather than calling
+\code{fit_ss()} directly.}
 
 \item{x}{A \code{vcmm_fit} object.}
 

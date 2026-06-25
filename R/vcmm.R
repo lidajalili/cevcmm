@@ -42,26 +42,54 @@
 #' small problems. Use \code{method = "csl"} or \code{method = "ss"}
 #' to override.
 #'
-#' \strong{Random-effects covariance.} Currently only \code{re_cov =
-#' "diag"} (the \eqn{\alpha \sim N(0, \sigma_\alpha^2 I_q)}
-#' specification above) is supported. The other two options
-#' (\code{"kronecker"} for origin-destination data,
-#' \code{"separable"} for group-shared dense random effects) are
-#' planned for a later release and will currently raise an informative
-#' error.
+#' \strong{Random-effects covariance.} Two structures are supported:
+#' \itemize{
+#'   \item \code{re_cov = "diag"} (default): \eqn{\alpha \sim N(0,
+#'     \sigma_\alpha^2 I_q)}. Smallest, fastest.
+#'   \item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0, \Sigma_{2\times 2}
+#'     \otimes \Sigma_{\text{spatial}})} for origin-destination data.
+#'     Each of \code{n_groups} districts has a 2-dimensional random
+#'     effect (origin, destination), so \code{ncol(Z)} must equal
+#'     \code{2 * n_groups}. When \code{control$update_variance = TRUE},
+#'     the 2-by-2 origin-destination cross-effect covariance
+#'     \code{Sigma_2x2} is re-estimated at every iteration from the
+#'     column covariance of \code{matrix(alpha_hat, G, 2)}. The G-by-G
+#'     spatial covariance \code{Sigma_spatial} is \strong{held fixed}
+#'     at the user-supplied initial value (default \code{I_G}). The
+#'     reason is identifiability: with a single \eqn{\hat\alpha}, the
+#'     moment-based spatial estimator is rank-2 at most and iterating
+#'     it is unstable. For real OD data, supply a parametric spatial
+#'     kernel via \code{Sigma_spatial_init} (e.g.
+#'     \code{exp(-D / phi)} for a known distance matrix \code{D}).
+#' }
+#' (A third option, \code{"separable"} for group-shared dense random
+#' effects, is planned for a later release.)
 #'
 #' @param y Numeric response vector of length \eqn{n}.
 #' @param X Numeric \eqn{n \times K} matrix (or length-\eqn{n} vector if
 #'   \eqn{K = 1}) of covariates that get varying coefficients in
 #'   \code{t}.
 #' @param Z Numeric \eqn{n \times q} random-effects design matrix.
+#'   For \code{re_cov = "kronecker"}, \eqn{q} must equal
+#'   \code{2 * n_groups}.
 #' @param t Numeric vector of length \eqn{n} in which the coefficients
 #'   vary smoothly.
 #' @param method Character: \code{"auto"} (default), \code{"csl"}, or
 #'   \code{"ss"}. See Details.
-#' @param re_cov Character: random-effects covariance structure.
-#'   Currently only \code{"diag"} is implemented; \code{"kronecker"}
-#'   and \code{"separable"} are planned.
+#' @param re_cov Character: random-effects covariance structure;
+#'   \code{"diag"} (default) or \code{"kronecker"}. See Details.
+#' @param n_groups Integer. Number of groups for
+#'   \code{re_cov = "kronecker"} only. Must satisfy
+#'   \code{ncol(Z) == 2 * n_groups}. Ignored otherwise.
+#' @param Sigma_2x2_init Optional 2 by 2 initial Sigma_2x2 (only used
+#'   for \code{re_cov = "kronecker"}). Defaults to
+#'   \code{sigma_alpha^2 * I_2}. With \code{update_variance = TRUE} the
+#'   final estimate is data-driven; the initial value only affects
+#'   iteration 1.
+#' @param Sigma_spatial_init Optional G by G initial Sigma_spatial
+#'   (only used for \code{re_cov = "kronecker"}). Defaults to
+#'   \code{I_G}. With \code{update_variance = TRUE} the final estimate
+#'   is data-driven; the initial value only affects iteration 1.
 #' @param n_basis Integer or \code{NULL}. Number of B-spline basis
 #'   functions per varying coefficient. \code{NULL} (default)
 #'   auto-picks \code{max(floor(n^(1/3)) + 4, 10)}.
@@ -111,25 +139,25 @@ vcmm <- function(y,
                  X,
                  Z,
                  t,
-                 method      = c("auto", "csl", "ss"),
-                 re_cov      = c("diag", "kronecker", "separable"),
-                 n_basis     = NULL,
-                 degree      = 3L,
-                 lambda      = 1,
-                 control     = vcmm_control(),
-                 normalize_t = TRUE,
+                 method             = c("auto", "csl", "ss"),
+                 re_cov             = c("diag", "kronecker", "separable"),
+                 n_groups           = NULL,
+                 Sigma_2x2_init     = NULL,
+                 Sigma_spatial_init = NULL,
+                 n_basis            = NULL,
+                 degree             = 3L,
+                 lambda             = 1,
+                 control            = vcmm_control(),
+                 normalize_t        = TRUE,
                  ...) {
 
   # ----- Argument matching and basic validation ---------------------------
   method <- match.arg(method)
   re_cov <- match.arg(re_cov)
 
-  if (re_cov != "diag") {
-    stop(sprintf(
-      "re_cov = '%s' is not yet implemented; only 'diag' is supported in this version. ",
-      re_cov),
-      "Planned for a later release.",
-      call. = FALSE)
+  if (re_cov == "separable") {
+    stop("re_cov = 'separable' is not yet implemented; planned for a later release.",
+         call. = FALSE)
   }
 
   if (!is.numeric(y)) {
@@ -152,6 +180,57 @@ vcmm <- function(y,
     stop("NA values are not allowed in `Z`.", call. = FALSE)
   }
   q_dim <- ncol(Z)
+
+  # ----- re_cov-specific validation and initial state --------------------
+  re_cov_state <- NULL
+  if (re_cov == "kronecker") {
+    if (is.null(n_groups) ||
+        !is.numeric(n_groups) || length(n_groups) != 1L ||
+        n_groups < 1L || n_groups != as.integer(n_groups)) {
+      stop("re_cov = 'kronecker' requires `n_groups` (a single positive integer).",
+           call. = FALSE)
+    }
+    n_groups <- as.integer(n_groups)
+    if (q_dim != 2L * n_groups) {
+      stop(sprintf(
+        "For re_cov = 'kronecker', ncol(Z) must equal 2 * n_groups; got ncol(Z) = %d and n_groups = %d.",
+        q_dim, n_groups),
+        call. = FALSE)
+    }
+
+    # Default initial Sigma matrices: identity for both
+    # (steady-state value will be estimated from data if update_variance = TRUE)
+    if (is.null(Sigma_2x2_init)) {
+      Sigma_2x2_init <- (control$sigma_alpha^2) * diag(2L)
+    }
+    if (is.null(Sigma_spatial_init)) {
+      Sigma_spatial_init <- diag(n_groups)
+    }
+    if (!isTRUE(all.equal(dim(Sigma_2x2_init), c(2L, 2L)))) {
+      stop("`Sigma_2x2_init` must be a 2 by 2 matrix.", call. = FALSE)
+    }
+    if (!isTRUE(all.equal(dim(Sigma_spatial_init),
+                          c(n_groups, n_groups)))) {
+      stop(sprintf("`Sigma_spatial_init` must be %d by %d.",
+                   n_groups, n_groups),
+           call. = FALSE)
+    }
+
+    re_cov_state <- .new_re_cov_state(
+      type          = "kronecker",
+      Sigma_2x2     = Sigma_2x2_init,
+      Sigma_spatial = Sigma_spatial_init,
+      n_groups      = n_groups
+    )
+
+    if (!isTRUE(control$update_variance)) {
+      message(
+        "Note: re_cov = 'kronecker' is typically run with control$update_variance = TRUE ",
+        "so that Sigma_2x2 and Sigma_spatial are estimated from the data. ",
+        "Pass vcmm_control(..., update_variance = TRUE) to enable iterative estimation."
+      )
+    }
+  }
 
   # ----- Resolve method = "auto" -----------------------------------------
   if (method == "auto") {
@@ -183,13 +262,15 @@ vcmm <- function(y,
   }
 
   # ----- Aggregated sufficient statistics ---------------------------------
-  stats <- compute_sufficient_stats(y, design$X_design, Z)
+  stats_obj <- compute_sufficient_stats(y, design$X_design, Z)
 
   # ----- Dispatch to the chosen estimator ---------------------------------
   fit <- switch(
     method_used,
-    ss  = fit_ss (stats, design$penalty, control),
-    csl = fit_csl(stats, design$penalty, control, ...)
+    ss  = fit_ss (stats_obj, design$penalty, control,
+                  re_cov_state = re_cov_state),
+    csl = fit_csl(stats_obj, design$penalty, control,
+                  re_cov_state = re_cov_state, ...)
   )
 
   # ----- Attach design metadata for downstream predict/plot ---------------

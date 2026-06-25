@@ -43,6 +43,13 @@
 #'   \code{build_penalty_matrix()}.
 #' @param control A \code{vcmm_control} object with fitting options. Pass
 #'   \code{vcmm_control()} to use defaults.
+#' @param re_cov_state Optional. An internal random-effects covariance
+#'   state object (NULL for diagonal, or constructed for kronecker via
+#'   \code{vcmm()} with \code{re_cov = "kronecker"}). When NULL, the
+#'   prior precision is \code{(sigma_eps^2 / sigma_alpha^2) * I_q}
+#'   matching the diagonal case. Advanced users typically reach
+#'   \code{re_cov_state} via \code{vcmm()} rather than calling
+#'   \code{fit_ss()} directly.
 #'
 #' @return A list of class \code{"vcmm_fit"} with elements:
 #' \itemize{
@@ -84,7 +91,8 @@
 #'               vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
 #' fit
 #' coef(fit)
-fit_ss <- function(stats, penalty, control = vcmm_control()) {
+fit_ss <- function(stats, penalty, control = vcmm_control(),
+                   re_cov_state = NULL) {
 
   # --- Input validation ----------------------------------------------------
   if (!(inherits(stats, "vcmm_ss") || inherits(stats, "vcmm_accumulator"))) {
@@ -134,25 +142,33 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
     lhs_beta <- stats$C + penalty
     beta     <- as.vector(invert_matrix(lhs_beta, q = p) %*% rhs_beta)
 
-    ## Alpha update: (ZtZ + (s2_eps / s2_alpha) I) alpha = Zty - t(XtZ) beta
-    ridge     <- (sigma_eps^2) / (sigma_alpha^2)
+    ## Alpha update: (ZtZ + Sigma_alpha^{-1} prior precision) alpha = Zty - t(XtZ) beta
+    ## The precision matrix is built from re_cov_state (diag or kronecker).
+    prior_precision <- .build_prior_precision(re_cov_state, sigma_eps,
+                                              sigma_alpha, q)
     rhs_alpha <- as.vector(stats$Zty) - as.vector(crossprod(stats$XtZ, beta))
-    lhs_alpha <- stats$ZtZ + diag(ridge, q)
+    lhs_alpha <- stats$ZtZ + prior_precision
     alpha     <- as.vector(invert_matrix(lhs_alpha, q = q) %*% rhs_alpha)
 
-    ## Optional variance updates
+    ## Optional variance / covariance updates (M_eta rule)
     if (control$update_variance) {
-      # sigma_eps^2 = RSS / n, where RSS is written in terms of SS
+      # sigma_eps^2 = RSS / n  -- same formula for all re_cov types
       rss <- stats$a -
         2 * as.numeric(crossprod(beta,  stats$b)) +
             as.numeric(crossprod(beta,  stats$C   %*% beta)) -
         2 * as.numeric(crossprod(alpha, stats$Zty)) +
         2 * as.numeric(crossprod(beta,  stats$XtZ %*% alpha)) +
             as.numeric(crossprod(alpha, stats$ZtZ %*% alpha))
-      sigma_eps   <- sqrt(max(rss / n_obs, 1e-8))
+      sigma_eps <- sqrt(max(rss / n_obs, 1e-8))
 
-      # sigma_alpha^2 = mean(alpha^2)  (method of moments)
-      sigma_alpha <- sqrt(max(mean(alpha^2), 1e-8))
+      # Re-cov update:
+      #   diag      -> sigma_alpha via method of moments
+      #   kronecker -> update re_cov_state via estimate_kronecker_components()
+      if (is.null(re_cov_state) || identical(re_cov_state$type, "diag")) {
+        sigma_alpha <- sqrt(max(mean(alpha^2), 1e-8))
+      } else {
+        re_cov_state <- .update_re_cov_state(re_cov_state, alpha)
+      }
     }
 
     ## Convergence check (relative change)
@@ -174,10 +190,11 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
 
   ## Assemble the joint Hessian once at convergence so summary() / vcov()
   ## don't have to recompute. K is in the same parametrisation as fit_csl.
-  ridge_alpha <- (sigma_eps^2) / (sigma_alpha^2)
+  prior_precision_final <- .build_prior_precision(re_cov_state, sigma_eps,
+                                                  sigma_alpha, q)
   V_bb_final <- stats$C   + penalty
   V_ba_final <- stats$XtZ
-  V_aa_final <- stats$ZtZ + ridge_alpha * diag(q)
+  V_aa_final <- stats$ZtZ + prior_precision_final
   K_final <- rbind(cbind(V_bb_final,   V_ba_final),
                    cbind(t(V_ba_final), V_aa_final))
   K_final <- (K_final + t(K_final)) / 2   # numerical symmetry
@@ -189,20 +206,21 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
   }
 
   out <- list(
-    beta        = beta,
-    alpha       = alpha,
-    sigma_eps   = sigma_eps,
-    sigma_alpha = sigma_alpha,
-    iterations  = iter,
-    converged   = converged,
-    elapsed_sec = elapsed,
-    n_obs       = n_obs,
-    p           = p,
-    q           = q,
-    method      = "SS",
-    control     = control,
-    K_inv       = K_inv,
-    call        = match.call()
+    beta         = beta,
+    alpha        = alpha,
+    sigma_eps    = sigma_eps,
+    sigma_alpha  = sigma_alpha,
+    iterations   = iter,
+    converged    = converged,
+    elapsed_sec  = elapsed,
+    n_obs        = n_obs,
+    p            = p,
+    q            = q,
+    method       = "SS",
+    control      = control,
+    K_inv        = K_inv,
+    re_cov_state = re_cov_state,
+    call         = match.call()
   )
   class(out) <- c("vcmm_fit", "list")
   out
@@ -218,6 +236,8 @@ print.vcmm_fit <- function(x, ...) {
   cat(sprintf("  n_obs       : %d\n", x$n_obs))
   cat(sprintf("  p (fixed)   : %d\n", x$p))
   cat(sprintf("  q (random)  : %d\n", x$q))
+  cat(sprintf("  RE cov      : %s\n",
+              if (!is.null(x$re_cov)) x$re_cov else "diag"))
 
   if (identical(x$method, "CSL") && !is.null(x$pilot)) {
     cat(sprintf("  pilot iter  : %d (%s)\n",
@@ -230,7 +250,21 @@ print.vcmm_fit <- function(x, ...) {
   }
 
   cat(sprintf("  sigma_eps   : %.4f\n", x$sigma_eps))
-  cat(sprintf("  sigma_alpha : %.4f\n", x$sigma_alpha))
+
+  if (identical(x$re_cov, "kronecker") && !is.null(x$re_cov_state)) {
+    S2 <- x$re_cov_state$Sigma_2x2
+    rho <- if (S2[1, 1] > 0 && S2[2, 2] > 0) {
+      S2[1, 2] / sqrt(S2[1, 1] * S2[2, 2])
+    } else NA_real_
+    cat("  Sigma_2x2   :\n")
+    cat(sprintf("    [%.4f  %.4f]\n", S2[1, 1], S2[1, 2]))
+    cat(sprintf("    [%.4f  %.4f]\n", S2[2, 1], S2[2, 2]))
+    cat(sprintf("  OD corr     : %.4f\n", rho))
+    G <- nrow(x$re_cov_state$Sigma_spatial)
+    cat(sprintf("  Sigma_spatial: %d x %d (G = %d groups)\n", G, G, G))
+  } else {
+    cat(sprintf("  sigma_alpha : %.4f\n", x$sigma_alpha))
+  }
 
   if (identical(x$method, "CSL") &&
       !is.null(x$pilot_elapsed_sec) && !is.null(x$step_elapsed_sec)) {
