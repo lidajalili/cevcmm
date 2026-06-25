@@ -9,7 +9,8 @@ vcmm(
   X,
   Z,
   t,
-  method = c("csl", "ss"),
+  method = c("auto", "csl", "ss"),
+  re_cov = c("diag", "kronecker", "separable"),
   n_basis = NULL,
   degree = 3L,
   lambda = 1,
@@ -30,13 +31,16 @@ vcmm(
 \item{t}{Numeric vector of length \eqn{n} in which the coefficients
 vary smoothly.}
 
-\item{method}{Character: \code{"csl"} (default) for the one-step
-communication-efficient estimator, or \code{"ss"} for the iterative
-sufficient-statistics estimator (exact MLE benchmark).}
+\item{method}{Character: \code{"auto"} (default), \code{"csl"}, or
+\code{"ss"}. See Details.}
+
+\item{re_cov}{Character: random-effects covariance structure.
+Currently only \code{"diag"} is implemented; \code{"kronecker"}
+and \code{"separable"} are planned.}
 
 \item{n_basis}{Integer or \code{NULL}. Number of B-spline basis
-functions per varying coefficient. \code{NULL} (default) auto-picks
-\code{max(floor(n^(1/3)) + 4, 10)}.}
+functions per varying coefficient. \code{NULL} (default)
+auto-picks \code{max(floor(n^(1/3)) + 4, 10)}.}
 
 \item{degree}{Integer. B-spline degree (default 3 = cubic).}
 
@@ -50,14 +54,15 @@ Pass \code{vcmm_control()} for defaults.}
 linearly mapped to \code{[0, 1]} before building the basis.}
 
 \item{...}{Further arguments passed to \code{fit_csl()} (e.g.
-\code{pilot_max_iter}) when \code{method = "csl"}. Ignored when
-\code{method = "ss"}.}
+\code{pilot_max_iter}) when CSL is used. Ignored under SS.}
 }
 \value{
 A \code{vcmm_fit} object (same class as the output of
 \code{fit_ss()} / \code{fit_csl()}) with an additional
 \code{design} element carrying the spline knots, degree, and
-\code{K} so that downstream prediction can reconstruct the basis.
+\code{K} so that downstream prediction can reconstruct the basis,
+and a \code{K_inv} element holding the cached inverse Hessian
+used by \code{vcov()} and \code{summary()}.
 }
 \description{
 The main user-facing fit function. Builds the B-spline design and
@@ -80,13 +85,22 @@ model is
 where each \eqn{\beta_k(t)} is a cubic B-spline with \code{n_basis}
 basis functions and a second-order difference penalty.
 
-\strong{Default method.} The default is \code{method = "csl"},
-matching the headline algorithm of Lin and Jalili (2026). By
-Theorem 3.1, the CSL estimator is first-order equivalent to the
-full-data SS estimator while needing only one Newton step from a
-\eqn{\sqrt{N}}-consistent pilot. Use \code{method = "ss"} to compute
-the exact-MLE benchmark; for large \eqn{N \cdot q} this can be much
-slower without changing the answer beyond \eqn{O(1/\sqrt N)}.
+\strong{Method selection.} The default is \code{method = "auto"},
+which picks \code{"csl"} when \eqn{N \cdot q > 10^5} or \eqn{q > 50}
+and \code{"ss"} otherwise. The CSL estimator is first-order
+equivalent to SS (Theorem 3.1 of the paper) while needing only one
+Newton step from a \eqn{\sqrt{N}}-consistent pilot; it dominates at
+scale. SS is the exact-MLE benchmark and the cleaner choice for
+small problems. Use \code{method = "csl"} or \code{method = "ss"}
+to override.
+
+\strong{Random-effects covariance.} Currently only \code{re_cov =
+"diag"} (the \eqn{\alpha \sim N(0, \sigma_\alpha^2 I_q)}
+specification above) is supported. The other two options
+(\code{"kronecker"} for origin-destination data,
+\code{"separable"} for group-shared dense random effects) are
+planned for a later release and will currently raise an informative
+error.
 }
 \examples{
 # ---- Single varying coefficient ---------------------------------------
@@ -103,16 +117,7 @@ fit <- vcmm(y, X = x, Z = Z, t = t,
             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
 fit
 
-# ---- Two varying coefficients -----------------------------------------
-x1 <- runif(n); x2 <- runif(n)
-y2 <- 2 + sin(2 * pi * t) * x1 + cos(2 * pi * t) * x2 +
-      as.vector(Z \%*\% alpha_true) + rnorm(n, sd = 0.5)
-
-fit2 <- vcmm(y2, X = cbind(x1, x2), Z = Z, t = t,
-             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
-fit2
-
-# ---- Exact-MLE benchmark via SS ---------------------------------------
+# ---- Force the SS estimator -------------------------------------------
 fit_ss_ref <- vcmm(y, X = x, Z = Z, t = t, method = "ss",
                    control = vcmm_control(sigma_eps = 0.5,
                                           sigma_alpha = 0.5))

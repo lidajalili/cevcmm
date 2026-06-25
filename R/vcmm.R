@@ -33,13 +33,22 @@
 #' where each \eqn{\beta_k(t)} is a cubic B-spline with \code{n_basis}
 #' basis functions and a second-order difference penalty.
 #'
-#' \strong{Default method.} The default is \code{method = "csl"},
-#' matching the headline algorithm of Lin and Jalili (2026). By
-#' Theorem 3.1, the CSL estimator is first-order equivalent to the
-#' full-data SS estimator while needing only one Newton step from a
-#' \eqn{\sqrt{N}}-consistent pilot. Use \code{method = "ss"} to compute
-#' the exact-MLE benchmark; for large \eqn{N \cdot q} this can be much
-#' slower without changing the answer beyond \eqn{O(1/\sqrt N)}.
+#' \strong{Method selection.} The default is \code{method = "auto"},
+#' which picks \code{"csl"} when \eqn{N \cdot q > 10^5} or \eqn{q > 50}
+#' and \code{"ss"} otherwise. The CSL estimator is first-order
+#' equivalent to SS (Theorem 3.1 of the paper) while needing only one
+#' Newton step from a \eqn{\sqrt{N}}-consistent pilot; it dominates at
+#' scale. SS is the exact-MLE benchmark and the cleaner choice for
+#' small problems. Use \code{method = "csl"} or \code{method = "ss"}
+#' to override.
+#'
+#' \strong{Random-effects covariance.} Currently only \code{re_cov =
+#' "diag"} (the \eqn{\alpha \sim N(0, \sigma_\alpha^2 I_q)}
+#' specification above) is supported. The other two options
+#' (\code{"kronecker"} for origin-destination data,
+#' \code{"separable"} for group-shared dense random effects) are
+#' planned for a later release and will currently raise an informative
+#' error.
 #'
 #' @param y Numeric response vector of length \eqn{n}.
 #' @param X Numeric \eqn{n \times K} matrix (or length-\eqn{n} vector if
@@ -48,12 +57,14 @@
 #' @param Z Numeric \eqn{n \times q} random-effects design matrix.
 #' @param t Numeric vector of length \eqn{n} in which the coefficients
 #'   vary smoothly.
-#' @param method Character: \code{"csl"} (default) for the one-step
-#'   communication-efficient estimator, or \code{"ss"} for the iterative
-#'   sufficient-statistics estimator (exact MLE benchmark).
+#' @param method Character: \code{"auto"} (default), \code{"csl"}, or
+#'   \code{"ss"}. See Details.
+#' @param re_cov Character: random-effects covariance structure.
+#'   Currently only \code{"diag"} is implemented; \code{"kronecker"}
+#'   and \code{"separable"} are planned.
 #' @param n_basis Integer or \code{NULL}. Number of B-spline basis
-#'   functions per varying coefficient. \code{NULL} (default) auto-picks
-#'   \code{max(floor(n^(1/3)) + 4, 10)}.
+#'   functions per varying coefficient. \code{NULL} (default)
+#'   auto-picks \code{max(floor(n^(1/3)) + 4, 10)}.
 #' @param degree Integer. B-spline degree (default 3 = cubic).
 #' @param lambda Non-negative numeric. Smoothing parameter for the
 #'   penalty (default 1).
@@ -62,13 +73,14 @@
 #' @param normalize_t Logical. If \code{TRUE} (default), \code{t} is
 #'   linearly mapped to \code{[0, 1]} before building the basis.
 #' @param ... Further arguments passed to \code{fit_csl()} (e.g.
-#'   \code{pilot_max_iter}) when \code{method = "csl"}. Ignored when
-#'   \code{method = "ss"}.
+#'   \code{pilot_max_iter}) when CSL is used. Ignored under SS.
 #'
 #' @return A \code{vcmm_fit} object (same class as the output of
 #'   \code{fit_ss()} / \code{fit_csl()}) with an additional
 #'   \code{design} element carrying the spline knots, degree, and
-#'   \code{K} so that downstream prediction can reconstruct the basis.
+#'   \code{K} so that downstream prediction can reconstruct the basis,
+#'   and a \code{K_inv} element holding the cached inverse Hessian
+#'   used by \code{vcov()} and \code{summary()}.
 #'
 #' @references
 #' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
@@ -91,16 +103,7 @@
 #'             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
 #' fit
 #'
-#' # ---- Two varying coefficients -----------------------------------------
-#' x1 <- runif(n); x2 <- runif(n)
-#' y2 <- 2 + sin(2 * pi * t) * x1 + cos(2 * pi * t) * x2 +
-#'       as.vector(Z %*% alpha_true) + rnorm(n, sd = 0.5)
-#'
-#' fit2 <- vcmm(y2, X = cbind(x1, x2), Z = Z, t = t,
-#'              control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
-#' fit2
-#'
-#' # ---- Exact-MLE benchmark via SS ---------------------------------------
+#' # ---- Force the SS estimator -------------------------------------------
 #' fit_ss_ref <- vcmm(y, X = x, Z = Z, t = t, method = "ss",
 #'                    control = vcmm_control(sigma_eps = 0.5,
 #'                                           sigma_alpha = 0.5))
@@ -108,7 +111,8 @@ vcmm <- function(y,
                  X,
                  Z,
                  t,
-                 method      = c("csl", "ss"),
+                 method      = c("auto", "csl", "ss"),
+                 re_cov      = c("diag", "kronecker", "separable"),
                  n_basis     = NULL,
                  degree      = 3L,
                  lambda      = 1,
@@ -118,6 +122,15 @@ vcmm <- function(y,
 
   # ----- Argument matching and basic validation ---------------------------
   method <- match.arg(method)
+  re_cov <- match.arg(re_cov)
+
+  if (re_cov != "diag") {
+    stop(sprintf(
+      "re_cov = '%s' is not yet implemented; only 'diag' is supported in this version. ",
+      re_cov),
+      "Planned for a later release.",
+      call. = FALSE)
+  }
 
   if (!is.numeric(y)) {
     stop("`y` must be a numeric vector.", call. = FALSE)
@@ -138,6 +151,22 @@ vcmm <- function(y,
   if (anyNA(Z)) {
     stop("NA values are not allowed in `Z`.", call. = FALSE)
   }
+  q_dim <- ncol(Z)
+
+  # ----- Resolve method = "auto" -----------------------------------------
+  if (method == "auto") {
+    if (n * q_dim > 1e5 || q_dim > 50L) {
+      method_used <- "csl"
+    } else {
+      method_used <- "ss"
+    }
+    if (isTRUE(control$verbose)) {
+      cat(sprintf("  [vcmm] method='auto' resolved to '%s' (N=%d, q=%d)\n",
+                  method_used, n, q_dim))
+    }
+  } else {
+    method_used <- method
+  }
 
   # ----- Build design and penalty -----------------------------------------
   design <- build_vcmm_design(X           = X,
@@ -147,7 +176,6 @@ vcmm <- function(y,
                               lambda      = lambda,
                               normalize_t = normalize_t)
 
-  # nrow check after design (design also validates length(t) == nrow(X))
   if (nrow(design$X_design) != n) {
     stop(sprintf("Internal: design rows (%d) != length(y) (%d).",
                  nrow(design$X_design), n),
@@ -159,7 +187,7 @@ vcmm <- function(y,
 
   # ----- Dispatch to the chosen estimator ---------------------------------
   fit <- switch(
-    method,
+    method_used,
     ss  = fit_ss (stats, design$penalty, control),
     csl = fit_csl(stats, design$penalty, control, ...)
   )
@@ -168,6 +196,7 @@ vcmm <- function(y,
   fit$design <- design[c("internal_knots", "boundary_knots",
                          "degree", "n_basis", "K", "lambda",
                          "normalize_t", "t_min", "t_max")]
+  fit$re_cov <- re_cov
   fit$call <- match.call()
   fit
 }

@@ -267,6 +267,7 @@ fit_csl <- function(stats,
     method            = "CSL",
     pilot             = pilot,
     control           = control,
+    K_inv             = K_inv,
     call              = match.call()
   )
   class(out) <- c("vcmm_fit", "list")

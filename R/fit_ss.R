@@ -172,6 +172,17 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
 
   elapsed <- as.numeric((proc.time() - start_time)["elapsed"])
 
+  ## Assemble the joint Hessian once at convergence so summary() / vcov()
+  ## don't have to recompute. K is in the same parametrisation as fit_csl.
+  ridge_alpha <- (sigma_eps^2) / (sigma_alpha^2)
+  V_bb_final <- stats$C   + penalty
+  V_ba_final <- stats$XtZ
+  V_aa_final <- stats$ZtZ + ridge_alpha * diag(q)
+  K_final <- rbind(cbind(V_bb_final,   V_ba_final),
+                   cbind(t(V_ba_final), V_aa_final))
+  K_final <- (K_final + t(K_final)) / 2   # numerical symmetry
+  K_inv   <- invert_matrix(K_final, q = p + q)
+
   if (control$verbose) {
     cat(sprintf("  [SS] converged=%s | iter=%d | elapsed=%.4fs\n",
                 converged, iter, elapsed))
@@ -190,6 +201,7 @@ fit_ss <- function(stats, penalty, control = vcmm_control()) {
     q           = q,
     method      = "SS",
     control     = control,
+    K_inv       = K_inv,
     call        = match.call()
   )
   class(out) <- c("vcmm_fit", "list")
