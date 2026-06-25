@@ -19,6 +19,8 @@ Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Depends:
     R (>= 4.0.0)
+Imports:                          
+    splines                        
 Suggests:
     testthat (>= 3.0.0),
     knitr,

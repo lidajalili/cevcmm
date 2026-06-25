@@ -4,37 +4,51 @@
 \alias{build_penalty_matrix}
 \title{Build a B-spline second-order difference penalty matrix}
 \usage{
-build_penalty_matrix(n_basis, lambda)
+build_penalty_matrix(n_basis, lambda, n_blocks = 1L)
 }
 \arguments{
-\item{n_basis}{Integer (\eqn{\geq 3}). Number of B-spline basis columns.}
+\item{n_basis}{Integer (\eqn{\geq 3}). Number of B-spline basis columns
+per varying coefficient.}
 
 \item{lambda}{Non-negative numeric. Smoothing parameter \eqn{\lambda}.}
+
+\item{n_blocks}{Integer (\eqn{\geq 1}). Number of varying coefficients
+(covariates) sharing the same penalty structure. Default 1.}
 }
 \value{
-A symmetric \eqn{(n\_basis + 1) \times (n\_basis + 1)} numeric
-matrix. The first row and column are zero (intercept is unpenalised).
+A symmetric \code{(1 + n_blocks * n_basis) x (1 + n_blocks * n_basis)}
+numeric matrix. Row/column 1 is zero (intercept is unpenalised).
 }
 \description{
 Constructs a symmetric \eqn{p \times p} penalty matrix
-\eqn{\mathbf{P}_\lambda} for use with cubic B-spline varying coefficients,
-where \eqn{p = n_{\text{basis}} + 1} (an intercept column is prepended).
-The penalty matrix is
-\deqn{
-  \mathbf{P}_\lambda
-  = \mathrm{diag}\left(0, \; \lambda\, \mathbf{D}_2^\top \mathbf{D}_2 \right)
+\eqn{\mathbf{P}_\lambda} for use with penalised B-spline varying
+coefficients. For a single varying coefficient
+(\code{n_blocks = 1}, default), \eqn{p = n\_basis + 1}; the intercept
+(row/column 1) is unpenalised, and the remaining block is
+\eqn{\lambda \mathbf{D}_2^\top \mathbf{D}_2} where \eqn{\mathbf{D}_2}
+is the second-order difference operator on \code{n_basis}
+coefficients.
 }
-where \eqn{\mathbf{D}_2} is the second-order difference operator on
-\code{n_basis} spline coefficients. The intercept (row/column 1) is not
-penalised. A small ridge is added if the spline block is not
-positive-definite, to guarantee numerical stability in downstream
-solves.
+\details{
+For \code{n_blocks > 1} (multiple covariates each with their own
+varying coefficient), the result is block-diagonal: one zero entry
+for the intercept, followed by \code{n_blocks} copies of the same
+\code{n_basis x n_basis} penalty block. The total dimension is
+\code{1 + n_blocks * n_basis}.
+
+A small ridge is added if any block is not positive-definite, to
+guarantee numerical stability in downstream solves.
 }
 \examples{
-P <- build_penalty_matrix(n_basis = 10, lambda = 1)
-dim(P)       # 11 x 11 (intercept + 10 basis columns)
-P[1, 1]      # 0 -- intercept is not penalised
-isSymmetric(P)
+# Single varying coefficient
+P1 <- build_penalty_matrix(n_basis = 10, lambda = 1)
+dim(P1)            # 11 x 11
+P1[1, 1]           # 0 -- intercept is not penalised
+
+# Three varying coefficients sharing the same penalty
+P3 <- build_penalty_matrix(n_basis = 10, lambda = 1, n_blocks = 3)
+dim(P3)            # 31 x 31  (1 + 3*10)
+isSymmetric(P3)
 }
 \references{
 Eilers, P. H. C. and Marx, B. D. (1996). Flexible smoothing with

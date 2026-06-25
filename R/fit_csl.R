@@ -199,22 +199,27 @@ fit_csl <- function(stats,
   sigma_alpha <- pilot$sigma_alpha
   se2 <- sigma_eps^2
   sa2 <- sigma_alpha^2
+  ridge_alpha <- se2 / sa2
 
-  ## Gradient at (beta_0, alpha_0) using FULL stats
-  g_beta  <- (1 / se2) * (as.vector(stats$C %*% beta_0) +
-                          as.vector(stats$XtZ %*% alpha_0) -
-                          as.vector(stats$b)) +
-             as.vector(penalty %*% beta_0)
-  g_alpha <- (1 / se2) * (as.vector(crossprod(stats$XtZ, beta_0)) +
-                          as.vector(stats$ZtZ %*% alpha_0) -
-                          as.vector(stats$Zty)) +
-             (1 / sa2) * alpha_0
+  ## Gradient at (beta_0, alpha_0) using FULL stats.
+  ## Form matches the implicit loss minimised by fit_ss():
+  ##   L = -(1/2 se2) ( ||y - X beta - Z alpha||^2 + beta' P beta )
+  ##       - (1/2 sa2) alpha' alpha
+  ## After multiplying through by se2 (the Newton direction is invariant),
+  ## the working gradient and Hessian are:
+  g_beta  <- as.vector((stats$C + penalty) %*% beta_0) +
+             as.vector(stats$XtZ %*% alpha_0) -
+             as.vector(stats$b)
+  g_alpha <- as.vector(crossprod(stats$XtZ, beta_0)) +
+             as.vector(stats$ZtZ %*% alpha_0) -
+             as.vector(stats$Zty) +
+             ridge_alpha * alpha_0
   g_vec <- c(g_beta, g_alpha)
 
-  ## Hessian (full aggregated, prior-augmented)
-  V_bb <- (1 / se2) * stats$C   + penalty
-  V_ba <- (1 / se2) * stats$XtZ
-  V_aa <- (1 / se2) * stats$ZtZ + (1 / sa2) * diag(q)
+  ## Hessian (full aggregated, prior-augmented), in the same parametrisation
+  V_bb <- stats$C   + penalty
+  V_ba <- stats$XtZ
+  V_aa <- stats$ZtZ + ridge_alpha * diag(q)
   K <- rbind(cbind(V_bb,   V_ba),
              cbind(t(V_ba), V_aa))
   K <- (K + t(K)) / 2   # enforce symmetry numerically
