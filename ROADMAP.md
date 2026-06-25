@@ -15,8 +15,8 @@ Commit this file at the end of every working day.
 | 2   | ✅     | `R/sufficient_stats.R`, `R/penalty.R`, `R/svd_stable.R` refactored from current modules with roxygen docs | All three load via `devtools::load_all()` |
 | 3   | ✅     | `R/ss_estimator.R` refactored; `vcmm_control()` options object | SS gives a numeric result on tiny data |
 | 4   | ✅     | `R/csl_estimator.R` refactored; pilot logic clean | CSL gives same first-order behavior as SS |
-| 5   | 🚧     | `R/design.R` — explicit-spec interface `vcmm(y, X, Z, t, group)` (formula sugar deferred to v0.2) | Three test specs run end-to-end |
-| 6   | ⬜     | `R/vcmm.R` — main wrapper with `auto` method selection (rule: `csl` if N×q > 1e7 or q > 100; else `ss`) | `vcmm(...)` runs end-to-end |
+| 5   | ✅      | `R/design.R` — explicit-spec interface `vcmm(y, X, Z, t, group)` (formula sugar deferred to v0.2) | Three test specs run end-to-end |
+| 6   | 🚧      | `R/vcmm.R` — main wrapper with `auto` method selection (rule: `csl` if N×q > 1e7 or q > 100; else `ss`) | `vcmm(...)` runs end-to-end |
 | 7   | ⬜     | Smoke test — replicate the SS validation setting (N=1000, q=1) | Estimates within MC noise of paper Table A1 |
 
 ## Week 2 — Variants, S3 methods, distributed API
