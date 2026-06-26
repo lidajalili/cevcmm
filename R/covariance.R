@@ -1,59 +1,63 @@
 #===============================================================================
-# Kronecker random-effects covariance for VCMMs
+# Kronecker-structured random-effects covariance for VCMMs
 #
-# Implements the structured covariance Sigma_alpha = Sigma_2x2 ⊗ Sigma_spatial
-# used in origin-destination (OD) settings, where each of G groups has a
-# 2-dimensional random effect (origin / destination) and the q = 2 * G
-# random-effect vector alpha is alpha = vec( G x 2 matrix ).
+# Implements the structured covariance Sigma_alpha = Sigma_left ⊗ Sigma_right
+# in the column-stacking convention:
 #
-# Per Algorithm 1 of Lin and Jalili (2026), the nuisance parameters
-# eta = (Sigma_alpha, sigma_eps^2) are updated at each iteration. For
-# Sigma_alpha = Sigma_2x2 ⊗ Sigma_spatial, the moment-based M_eta rule
-# is implemented here as estimate_kronecker_components(); fit_ss() and
-# fit_csl() invoke it once per iteration when control$update_variance is TRUE.
+#   alpha = vec_col(M),   M is (G x q_left),
+#   Var(alpha) = Sigma_left (q_left x q_left)  ⊗  Sigma_right (G x G).
+#
+# Two user-facing names route through the same internals:
+#
+#   re_cov = "kronecker": OD-style; q_left defaults to 2 (origin / dest);
+#                         user-facing matrices are Sigma_2x2 and Sigma_spatial.
+#   re_cov = "separable": group-shared dense; q_left is required and is
+#                         the per-group random-effect dimension;
+#                         user-facing matrices are Sigma_q and Omega_G.
+#
+# Mathematically identical -- only the parameter names and defaults differ.
+# Per Algorithm 1 of Lin and Jalili (2026) the M_eta rule updates the
+# random-effects covariance nuisance once per iteration; here we implement
+# the weighted moment estimator + EM-style posterior-variance correction
+# (Theorem 1 permits any fixed map of the summaries).
 #===============================================================================
 
 #-------------------------------------------------------------------------------
-# Build the random-effect precision matrix from Kronecker components.
-#
-# Returns sigma_eps^2 * (Sigma_2x2_inv ⊗ Sigma_spatial_inv), which goes into
-# the alpha-update equation in place of the diagonal ridge (sigma_eps^2 /
-# sigma_alpha^2) I_q used for re_cov = "diag".
+# Build the prior precision matrix sigma_eps^2 * (Sigma_left^{-1} ⊗ Sigma_right^{-1})
+# which augments crossprod(Z) in the alpha-update equation.
 #-------------------------------------------------------------------------------
 
 #' Build the Kronecker-structured random-effect precision matrix
 #'
-#' For Sigma_alpha = Sigma_2x2 \%x\% Sigma_spatial (the OD setting), returns
+#' For \eqn{\Sigma_\alpha = \Sigma_{\mathrm{left}} \otimes \Sigma_{\mathrm{right}}}
+#' (column-stacking convention), returns
 #' \deqn{
 #'   \sigma_\varepsilon^2 \cdot
-#'   (\Sigma_{2 \times 2}^{-1} \otimes \Sigma_{\text{spatial}}^{-1})
+#'   (\Sigma_{\mathrm{left}}^{-1} \otimes \Sigma_{\mathrm{right}}^{-1})
 #' }
-#' which is added to \code{crossprod(Z)} inside the random-effect block of the
-#' VCMM Hessian. This is the structured analogue of
+#' which is added to \code{crossprod(Z)} inside the random-effect block of
+#' the VCMM Hessian. This is the structured analogue of
 #' \code{(sigma_eps^2 / sigma_alpha^2) * I_q} used under
 #' \code{re_cov = "diag"}.
 #'
-#' @param Sigma_2x2 A 2 by 2 positive-definite numeric matrix.
-#' @param Sigma_spatial A G by G positive-definite numeric matrix
-#'   describing spatial correlation across G groups.
-#' @param sigma_eps Positive numeric. Residual standard deviation
-#'   (used to scale the precision into the implicit-loss parametrisation
-#'   that fit_ss and fit_csl share).
+#' @param Sigma_left A \eqn{k \times k} positive-definite numeric matrix
+#'   (\eqn{k = 2} for OD-style; arbitrary \eqn{k} for general separable).
+#' @param Sigma_right A \eqn{G \times G} positive-definite numeric matrix.
+#' @param sigma_eps Positive numeric. Residual standard deviation.
 #'
-#' @return A 2G by 2G numeric matrix.
+#' @return A \eqn{kG \times kG} numeric matrix.
 #'
 #' @references
 #' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
-build_kronecker_precision <- function(Sigma_2x2, Sigma_spatial, sigma_eps) {
-  if (!is.matrix(Sigma_2x2) || !identical(dim(Sigma_2x2), c(2L, 2L))) {
-    stop("`Sigma_2x2` must be a 2 by 2 matrix.", call. = FALSE)
+build_kronecker_precision <- function(Sigma_left, Sigma_right, sigma_eps) {
+  if (!is.matrix(Sigma_left) || nrow(Sigma_left) != ncol(Sigma_left)) {
+    stop("`Sigma_left` must be a square matrix.", call. = FALSE)
   }
-  if (!is.matrix(Sigma_spatial) ||
-      nrow(Sigma_spatial) != ncol(Sigma_spatial)) {
-    stop("`Sigma_spatial` must be a square matrix.", call. = FALSE)
+  if (!is.matrix(Sigma_right) || nrow(Sigma_right) != ncol(Sigma_right)) {
+    stop("`Sigma_right` must be a square matrix.", call. = FALSE)
   }
   if (!is.numeric(sigma_eps) || length(sigma_eps) != 1L ||
       sigma_eps <= 0 || !is.finite(sigma_eps)) {
@@ -61,72 +65,61 @@ build_kronecker_precision <- function(Sigma_2x2, Sigma_spatial, sigma_eps) {
          call. = FALSE)
   }
 
-  Sigma_2x2_inv     <- solve(Sigma_2x2)
-  Sigma_spatial_inv <- solve(Sigma_spatial)
-  (sigma_eps^2) * kronecker(Sigma_2x2_inv, Sigma_spatial_inv)
+  Sigma_left_inv  <- solve(Sigma_left)
+  Sigma_right_inv <- solve(Sigma_right)
+  (sigma_eps^2) * kronecker(Sigma_left_inv, Sigma_right_inv)
 }
 
 #-------------------------------------------------------------------------------
-# Moment-based M_eta rule for Sigma_2x2 and Sigma_spatial from alpha_hat.
+# Moment-based M_eta rule for Sigma_left from alpha_hat with Sigma_right fixed.
 #
-# Given alpha_hat = vec(G x 2 matrix) where column 1 is origin effects and
-# column 2 is destination effects:
-#   Sigma_2x2_hat     = cov(alpha_mat)                    (2 x 2)
-#   Sigma_spatial_hat = average of normalized tcrossprod  (G x G)
+# Estimator (weighted, GLS-style):
+#   Sigma_left_hat = (1/G) alpha_mat' Sigma_right^{-1} alpha_mat
 #
-# Both are projected to be symmetric positive-definite via a minimal ridge.
-# Sigma_spatial_hat is rescaled to a correlation matrix (unit diagonal) for
-# identifiability of the Kronecker decomposition.
-#
-# Note on identifiability: with one alpha_hat sample of length 2G, the row
-# covariance is a rank-1 quantity. The result captures the dominant spatial
-# pattern of alpha_hat but is not a full G x G covariance in the strict
-# statistical sense. Users with a parametric spatial kernel (e.g.
-# exponential decay exp(-d/phi)) should pass it via Sigma_spatial_init
-# and set update_variance = FALSE to keep it fixed.
+# where alpha_mat = matrix(alpha, nrow = G, ncol = q_left) under
+# column-stacking. Unbiased for the TRUE alpha when Sigma_right is correct;
+# combine with EM correction below when plugging in the BLUP.
 #-------------------------------------------------------------------------------
 
-#' Moment-based estimator for Kronecker covariance components
+#' Moment-based estimator for the Kronecker left component
 #'
-#' Given a length-\eqn{2G} random-effects estimate
-#' \eqn{\hat\alpha = \mathrm{vec}(G \times 2\ \mathrm{matrix})} (column 1
-#' = origin effects, column 2 = destination effects), returns
-#' moment-based estimates of \code{Sigma_2x2} and \code{Sigma_spatial}
-#' that together specify \eqn{\hat\Sigma_\alpha = \Sigma_{2\times 2}
-#' \otimes \Sigma_{\text{spatial}}}.
+#' Given a length-\eqn{kG} random-effects estimate
+#' \eqn{\hat\alpha = \mathrm{vec}_{\mathrm{col}}(M)} (column-stacked,
+#' \eqn{M \in \mathbb R^{G \times k}}) and the right-side covariance
+#' \code{Sigma_right}, returns the weighted moment estimate
+#' \deqn{\hat\Sigma_{\mathrm{left}} =
+#'   \tfrac{1}{G}\, M^{\top}\, \Sigma_{\mathrm{right}}^{-1}\, M.}
 #'
-#' This is the \eqn{M_\eta} update rule the paper permits (one of several
-#' allowed choices listed alongside ML, REML, quasi-likelihood, and
-#' Fisher-scoring). It is the form actually used in the simulation code's
-#' post-hoc covariance estimator, lifted into the iterative loop here so
-#' that the package works for real OD data where \eqn{\Sigma_\alpha} is
-#' unknown.
+#' This is unbiased under the Kronecker model
+#' \eqn{\alpha \sim N(0, \Sigma_{\mathrm{left}} \otimes
+#' \Sigma_{\mathrm{right}})} when \code{Sigma_right} is correct.
+#' When \eqn{\hat\alpha} is the BLUP rather than the true \eqn{\alpha},
+#' apply the EM-style correction in \code{\link{vcmm}} (handled
+#' automatically by \code{fit_ss} / \code{fit_csl}).
 #'
-#' \strong{Identifiability caveat.} With only one \eqn{\hat\alpha}
-#' sample, the spatial component is reconstructed from a rank-1
-#' quantity. The output captures the dominant spatial pattern in
-#' \eqn{\hat\alpha} but is a low-rank approximation rather than a full
-#' rank-G covariance. For applications where a parametric spatial
-#' kernel is available, supply it via \code{Sigma_spatial_init} in
-#' \code{vcmm()} and fit with \code{update_variance = FALSE}.
+#' Backwards-compatible alias: if \code{q_left = 2} (the default), this is
+#' the same estimator as the previous \code{estimate_kronecker_components}
+#' for the OD setting.
 #'
-#' @param alpha Numeric vector of length \eqn{2G}.
-#' @param n_groups Integer \eqn{G}, the number of groups. Must satisfy
-#'   \code{length(alpha) == 2 * n_groups}.
+#' @param alpha Numeric vector of length \eqn{kG}.
+#' @param n_groups Integer \eqn{G}.
+#' @param q_left Integer \eqn{k}, the left (within) dimension. Defaults to
+#'   2 for backward compatibility with the OD setting.
+#' @param Sigma_right Optional \eqn{G \times G} positive-definite covariance.
+#'   If \code{NULL}, the unweighted sample covariance \code{cov(alpha_mat)}
+#'   is returned (unbiased only when rows are uncorrelated).
 #'
-#' @return A list with elements:
-#' \itemize{
-#'   \item \code{Sigma_2x2}: 2 by 2 symmetric positive-definite matrix.
-#'   \item \code{Sigma_spatial}: G by G symmetric positive-definite
-#'     correlation matrix (unit diagonal).
-#' }
+#' @return A \eqn{k \times k} symmetric positive-definite matrix.
 #'
 #' @references
 #' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
-estimate_kronecker_components <- function(alpha, n_groups) {
+estimate_kronecker_components <- function(alpha,
+                                          n_groups,
+                                          q_left      = 2L,
+                                          Sigma_right = NULL) {
   if (!is.numeric(alpha)) {
     stop("`alpha` must be numeric.", call. = FALSE)
   }
@@ -134,41 +127,37 @@ estimate_kronecker_components <- function(alpha, n_groups) {
       n_groups < 1 || n_groups != as.integer(n_groups)) {
     stop("`n_groups` must be a single positive integer.", call. = FALSE)
   }
-  n_groups <- as.integer(n_groups)
-  if (length(alpha) != 2L * n_groups) {
+  if (!is.numeric(q_left) || length(q_left) != 1L ||
+      q_left < 1 || q_left != as.integer(q_left)) {
+    stop("`q_left` must be a single positive integer.", call. = FALSE)
+  }
+  G <- as.integer(n_groups)
+  k <- as.integer(q_left)
+
+  if (length(alpha) != k * G) {
     stop(sprintf(
-      "length(alpha) = %d does not match 2 * n_groups = %d.",
-      length(alpha), 2L * n_groups), call. = FALSE)
+      "length(alpha) = %d does not match q_left * n_groups = %d * %d = %d.",
+      length(alpha), k, G, k * G), call. = FALSE)
+  }
+  if (!is.null(Sigma_right)) {
+    if (!is.matrix(Sigma_right) ||
+        !isTRUE(all.equal(dim(Sigma_right), c(G, G)))) {
+      stop(sprintf("`Sigma_right` must be a %d by %d matrix.", G, G),
+           call. = FALSE)
+    }
   }
 
-  # Reshape: G x 2  (column 1 = origin, column 2 = destination)
-  alpha_mat <- matrix(alpha, nrow = n_groups, ncol = 2L)
+  # Column-stacking: alpha_mat[g, k] = alpha[(k-1)*G + g]
+  alpha_mat <- matrix(alpha, nrow = G, ncol = k)
 
-  # ----- Sigma_2x2 = column covariance, projected to PD --------------------
-  Sigma_2x2 <- stats::cov(alpha_mat)
-  Sigma_2x2 <- .project_pd(Sigma_2x2)
-
-  # ----- Sigma_spatial = average normalised row covariance ----------------
-  alpha_O <- alpha_mat[, 1L]
-  alpha_D <- alpha_mat[, 2L]
-
-  norm_O <- max(sum(alpha_O^2), 1e-8)
-  norm_D <- max(sum(alpha_D^2), 1e-8)
-  Sigma_spatial_O <- tcrossprod(alpha_O) / norm_O
-  Sigma_spatial_D <- tcrossprod(alpha_D) / norm_D
-  Sigma_spatial   <- (Sigma_spatial_O + Sigma_spatial_D) / 2
-
-  # Rescale to unit diagonal (correlation matrix) for Kronecker identifiability
-  diag_vals <- diag(Sigma_spatial)
-  diag_vals[diag_vals < 1e-8] <- 1
-  D_inv <- diag(1 / sqrt(diag_vals), n_groups)
-  Sigma_spatial <- D_inv %*% Sigma_spatial %*% D_inv
-  Sigma_spatial <- (Sigma_spatial + t(Sigma_spatial)) / 2   # symmetry
-
-  # Project to PD with minimal ridge
-  Sigma_spatial <- .project_pd(Sigma_spatial)
-
-  list(Sigma_2x2 = Sigma_2x2, Sigma_spatial = Sigma_spatial)
+  if (is.null(Sigma_right)) {
+    S <- stats::cov(alpha_mat)
+  } else {
+    Sinv_alpha <- solve(Sigma_right, alpha_mat)
+    S <- crossprod(alpha_mat, Sinv_alpha) / G
+  }
+  S <- (S + t(S)) / 2
+  .project_pd(S)
 }
 
 #-------------------------------------------------------------------------------
@@ -185,67 +174,168 @@ estimate_kronecker_components <- function(alpha, n_groups) {
 }
 
 #-------------------------------------------------------------------------------
-# Internal: build a fresh re_cov_state object (passed through fit_ss/fit_csl)
+# Internal: build a fresh re_cov_state object.
+#
+# Canonical field names: Sigma_left, Sigma_right, n_groups, q_left.
+# Legacy aliases populated when type == "kronecker" with q_left = 2
+# (Sigma_2x2 / Sigma_spatial), and when type == "separable"
+# (Sigma_q / Omega_G), so existing scripts and the print method work.
 #-------------------------------------------------------------------------------
 .new_re_cov_state <- function(type,
-                              Sigma_2x2     = NULL,
-                              Sigma_spatial = NULL,
-                              n_groups      = NULL) {
-  list(
-    type          = type,
-    Sigma_2x2     = Sigma_2x2,
-    Sigma_spatial = Sigma_spatial,
-    n_groups      = n_groups
+                              Sigma_left  = NULL,
+                              Sigma_right = NULL,
+                              n_groups    = NULL,
+                              q_left      = NULL) {
+  state <- list(
+    type        = type,
+    Sigma_left  = Sigma_left,
+    Sigma_right = Sigma_right,
+    n_groups    = n_groups,
+    q_left      = q_left
   )
+  .sync_legacy_aliases(state)
+}
+
+#-------------------------------------------------------------------------------
+# Internal: keep legacy field aliases in sync with the canonical fields.
+# Called after every update to re_cov_state$Sigma_left or $Sigma_right.
+#-------------------------------------------------------------------------------
+.sync_legacy_aliases <- function(state) {
+  if (is.null(state) || identical(state$type, "diag")) return(state)
+
+  if (identical(state$type, "kronecker") && identical(state$q_left, 2L)) {
+    state$Sigma_2x2     <- state$Sigma_left
+    state$Sigma_spatial <- state$Sigma_right
+  }
+  if (identical(state$type, "separable")) {
+    state$Sigma_q  <- state$Sigma_left
+    state$Omega_G  <- state$Sigma_right
+  }
+  state
 }
 
 #-------------------------------------------------------------------------------
 # Internal: assemble the prior precision matrix for the alpha-update.
 #
-# For diag:      sigma_eps^2 / sigma_alpha^2 * I_q
-# For kronecker: sigma_eps^2 * (Sigma_2x2_inv ⊗ Sigma_spatial_inv)
+#   diag                -> sigma_eps^2 / sigma_alpha^2 * I_q
+#   kronecker/separable -> sigma_eps^2 * (Sigma_left_inv ⊗ Sigma_right_inv)
 #-------------------------------------------------------------------------------
 .build_prior_precision <- function(re_cov_state, sigma_eps, sigma_alpha, q) {
   type <- if (is.null(re_cov_state)) "diag" else re_cov_state$type
-  switch(
-    type,
-    diag = {
-      ridge <- (sigma_eps^2) / (sigma_alpha^2)
-      diag(ridge, q)
-    },
-    kronecker = build_kronecker_precision(re_cov_state$Sigma_2x2,
-                                          re_cov_state$Sigma_spatial,
-                                          sigma_eps),
-    stop(sprintf("Unknown re_cov_state type: '%s'.", type), call. = FALSE)
-  )
+  if (identical(type, "diag")) {
+    ridge <- (sigma_eps^2) / (sigma_alpha^2)
+    return(diag(ridge, q))
+  }
+  if (identical(type, "kronecker") || identical(type, "separable")) {
+    return(build_kronecker_precision(re_cov_state$Sigma_left,
+                                     re_cov_state$Sigma_right,
+                                     sigma_eps))
+  }
+  stop(sprintf("Unknown re_cov_state type: '%s'.", type), call. = FALSE)
 }
 
 #-------------------------------------------------------------------------------
-# Internal: update re_cov_state in-place for one M_eta step.
-#
-# Design choice (v0.1):
-#   For re_cov = "kronecker" we update Sigma_2x2 only via column covariance
-#   of the (G x 2) reshape of alpha_hat. Sigma_spatial is HELD FIXED at the
-#   user-supplied initial value because the moment-based estimator from
-#   one alpha_hat is rank-2 at most, which is not identifiable and causes
-#   iterative reinforcement of noise. For real OD data, Sigma_spatial
-#   should be a parametric spatial kernel supplied by the user (e.g.
-#   exp(-d/phi) with a known distance matrix). A future release will add
-#   parametric spatial estimation.
+# Internal: weighted-moment update (no EM correction).
+# Used inside the iterative loop; EM correction is applied once at convergence
+# via .apply_em_correction_if_kronecker().
 #-------------------------------------------------------------------------------
 .update_re_cov_state <- function(re_cov_state, alpha) {
-  if (is.null(re_cov_state) || re_cov_state$type == "diag") {
+  if (is.null(re_cov_state) || identical(re_cov_state$type, "diag")) {
     return(re_cov_state)
   }
-  if (re_cov_state$type == "kronecker") {
-    # Update Sigma_2x2 only (low-dim, identifiable from G samples)
-    alpha_mat <- matrix(alpha, nrow = re_cov_state$n_groups, ncol = 2L)
-    S2 <- stats::cov(alpha_mat)
-    S2 <- .project_pd(S2)
-    re_cov_state$Sigma_2x2 <- S2
-    # Sigma_spatial is intentionally NOT updated -- held fixed at the
-    # user-supplied (or identity-default) value.
-    return(re_cov_state)
+  if (identical(re_cov_state$type, "kronecker") ||
+      identical(re_cov_state$type, "separable")) {
+
+    G <- re_cov_state$n_groups
+    k <- re_cov_state$q_left
+    alpha_mat <- matrix(alpha, nrow = G, ncol = k)
+
+    Sinv_alpha <- solve(re_cov_state$Sigma_right, alpha_mat)
+    S <- crossprod(alpha_mat, Sinv_alpha) / G
+    S <- (S + t(S)) / 2
+    S <- .project_pd(S)
+
+    re_cov_state$Sigma_left <- S
+    return(.sync_legacy_aliases(re_cov_state))
   }
   re_cov_state
+}
+
+#-------------------------------------------------------------------------------
+# Internal: EM-style correction for Sigma_left.
+#
+# Plugging the BLUP into the moment estimator gives
+#   E[(1/G) M' Sinv M] = Sigma_left - C_corr
+# where C_corr is the posterior-variance partial trace:
+#   C_corr[i, j] = (1/G) sum_{g, h} Sinv[g, h] *
+#                  V_alpha_alpha[(i-1)G + g, (j-1)G + h]
+# Adding C_corr removes the BLUP shrinkage bias exactly under the Gaussian
+# model when Sigma_right is correct. This is the M_eta rule used by fit_ss
+# and fit_csl when re_cov is "kronecker" or "separable".
+#-------------------------------------------------------------------------------
+.estimate_sigma_left_em <- function(alpha,
+                                    V_aa_post,
+                                    Sigma_right,
+                                    n_groups,
+                                    q_left) {
+  G <- as.integer(n_groups)
+  k <- as.integer(q_left)
+  stopifnot(length(alpha) == k * G,
+            identical(dim(V_aa_post), c(k * G, k * G)),
+            identical(dim(Sigma_right), c(G, G)))
+
+  alpha_mat <- matrix(alpha, nrow = G, ncol = k)
+  Sinv      <- solve(Sigma_right)
+
+  # Moment term: (1/G) M' Sinv M
+  S_moment <- crossprod(alpha_mat, Sinv %*% alpha_mat) / G
+
+  # Posterior-variance correction (partial trace).
+  C_corr <- matrix(0, k, k)
+  for (i in seq_len(k)) {
+    rows_i <- ((i - 1L) * G + 1L):(i * G)
+    for (j in seq_len(k)) {
+      cols_j       <- ((j - 1L) * G + 1L):(j * G)
+      V_block      <- V_aa_post[rows_i, cols_j, drop = FALSE]
+      C_corr[i, j] <- sum(Sinv * V_block)
+    }
+  }
+  C_corr <- C_corr / G
+
+  S <- S_moment + C_corr
+  S <- (S + t(S)) / 2
+  .project_pd(S)
+}
+
+#-------------------------------------------------------------------------------
+# Internal: apply the EM correction once at convergence. Called from both
+# fit_ss (after K_inv is built) and fit_csl (after the Newton step).
+# No-op for re_cov = "diag" or when update_variance = FALSE.
+#-------------------------------------------------------------------------------
+.apply_em_correction_if_kronecker <- function(re_cov_state,
+                                              alpha,
+                                              sigma_eps,
+                                              K_inv,
+                                              p,
+                                              q,
+                                              control) {
+  if (!isTRUE(control$update_variance) || is.null(re_cov_state)) {
+    return(re_cov_state)
+  }
+  if (!(identical(re_cov_state$type, "kronecker") ||
+        identical(re_cov_state$type, "separable"))) {
+    return(re_cov_state)
+  }
+
+  idx_a     <- seq.int(p + 1L, p + q)
+  V_aa_post <- (sigma_eps^2) * K_inv[idx_a, idx_a, drop = FALSE]
+
+  re_cov_state$Sigma_left <- .estimate_sigma_left_em(
+    alpha       = alpha,
+    V_aa_post   = V_aa_post,
+    Sigma_right = re_cov_state$Sigma_right,
+    n_groups    = re_cov_state$n_groups,
+    q_left      = re_cov_state$q_left
+  )
+  .sync_legacy_aliases(re_cov_state)
 }

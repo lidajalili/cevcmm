@@ -12,8 +12,13 @@ vcmm(
   method = c("auto", "csl", "ss"),
   re_cov = c("diag", "kronecker", "separable"),
   n_groups = NULL,
+  q_left = NULL,
+  Sigma_left_init = NULL,
+  Sigma_right_init = NULL,
   Sigma_2x2_init = NULL,
   Sigma_spatial_init = NULL,
+  Sigma_q_init = NULL,
+  Omega_G_init = NULL,
   n_basis = NULL,
   degree = 3L,
   lambda = 1,
@@ -30,58 +35,73 @@ vcmm(
 \code{t}.}
 
 \item{Z}{Numeric \eqn{n \times q} random-effects design matrix.
-For \code{re_cov = "kronecker"}, \eqn{q} must equal
-\code{2 * n_groups}.}
+For \code{re_cov = "kronecker"} or \code{"separable"}, \eqn{q} must
+equal \code{q_left * n_groups}.}
 
 \item{t}{Numeric vector of length \eqn{n} in which the coefficients
 vary smoothly.}
 
 \item{method}{Character: \code{"auto"} (default), \code{"csl"}, or
-\code{"ss"}. See Details.}
+\code{"ss"}.}
 
-\item{re_cov}{Character: random-effects covariance structure;
-\code{"diag"} (default) or \code{"kronecker"}. See Details.}
+\item{re_cov}{Character: \code{"diag"} (default), \code{"kronecker"},
+or \code{"separable"}. See Details.}
 
-\item{n_groups}{Integer. Number of groups for
-\code{re_cov = "kronecker"} only. Must satisfy
-\code{ncol(Z) == 2 * n_groups}. Ignored otherwise.}
+\item{n_groups}{Integer \eqn{G}. Required for \code{"kronecker"} and
+\code{"separable"}.}
 
-\item{Sigma_2x2_init}{Optional 2 by 2 initial Sigma_2x2 (only used
-for \code{re_cov = "kronecker"}). Defaults to
-\code{sigma_alpha^2 * I_2}. With \code{update_variance = TRUE} the
-final estimate is data-driven; the initial value only affects
-iteration 1.}
+\item{q_left}{Integer. The left (within) dimension of the Kronecker
+factor. For \code{re_cov = "kronecker"} defaults to 2 (OD setting);
+for \code{re_cov = "separable"} this is the per-group random-effect
+dimension and \strong{must be supplied}.}
 
-\item{Sigma_spatial_init}{Optional G by G initial Sigma_spatial
-(only used for \code{re_cov = "kronecker"}). Defaults to
-\code{I_G}. With \code{update_variance = TRUE} the final estimate
-is data-driven; the initial value only affects iteration 1.}
+\item{Sigma_left_init}{Optional \eqn{k \times k} initial left
+covariance (\eqn{k = q_{\mathrm{left}}}). Aliases accepted:
+\code{Sigma_2x2_init} (for \code{"kronecker"} with \code{q_left =
+2}) and \code{Sigma_q_init} (for \code{"separable"}). Default is
+\code{sigma_alpha^2 * I_k}.}
+
+\item{Sigma_right_init}{Optional \eqn{G \times G} initial right
+covariance. Aliases accepted: \code{Sigma_spatial_init} (for
+\code{"kronecker"}) and \code{Omega_G_init} (for \code{"separable"}).
+Default is \eqn{I_G}.}
+
+\item{Sigma_2x2_init}{Legacy alias for \code{Sigma_left_init} when
+\code{re_cov = "kronecker"} and \code{q_left = 2}.}
+
+\item{Sigma_spatial_init}{Legacy alias for \code{Sigma_right_init}
+when \code{re_cov = "kronecker"}.}
+
+\item{Sigma_q_init}{Alias for \code{Sigma_left_init} when
+\code{re_cov = "separable"}.}
+
+\item{Omega_G_init}{Alias for \code{Sigma_right_init} when
+\code{re_cov = "separable"}.}
 
 \item{n_basis}{Integer or \code{NULL}. Number of B-spline basis
-functions per varying coefficient. \code{NULL} (default)
-auto-picks \code{max(floor(n^(1/3)) + 4, 10)}.}
+functions per varying coefficient. \code{NULL} (default) auto-picks
+\code{max(floor(n^(1/3)) + 4, 10)}.}
 
 \item{degree}{Integer. B-spline degree (default 3 = cubic).}
 
-\item{lambda}{Non-negative numeric. Smoothing parameter for the
-penalty (default 1).}
+\item{lambda}{Non-negative numeric. Smoothing parameter (default 1).}
 
-\item{control}{A \code{vcmm_control} object with fitting options.
-Pass \code{vcmm_control()} for defaults.}
+\item{control}{A \code{vcmm_control} object.}
 
 \item{normalize_t}{Logical. If \code{TRUE} (default), \code{t} is
 linearly mapped to \code{[0, 1]} before building the basis.}
 
-\item{...}{Further arguments passed to \code{fit_csl()} (e.g.
-\code{pilot_max_iter}) when CSL is used. Ignored under SS.}
+\item{...}{Further arguments passed to \code{fit_csl()} when CSL is
+used.}
 }
 \value{
-A \code{vcmm_fit} object (same class as the output of
-\code{fit_ss()} / \code{fit_csl()}) with an additional
-\code{design} element carrying the spline knots, degree, and
-\code{K} so that downstream prediction can reconstruct the basis,
-and a \code{K_inv} element holding the cached inverse Hessian
-used by \code{vcov()} and \code{summary()}.
+A \code{vcmm_fit} object as returned by \code{fit_ss()} or
+\code{fit_csl()}, augmented with \code{design} (basis metadata) and
+\code{re_cov}. When \code{re_cov} is \code{"kronecker"} or
+\code{"separable"}, \code{re_cov_state} contains the canonical
+fields \code{Sigma_left}, \code{Sigma_right}, plus legacy aliases
+\code{Sigma_2x2}/\code{Sigma_spatial} (when \code{q_left = 2}) or
+\code{Sigma_q}/\code{Omega_G} (for separable).
 }
 \description{
 The main user-facing fit function. Builds the B-spline design and
@@ -96,48 +116,53 @@ model is
   y_i
   = \beta_0(t_i) + \sum_{k=1}^{K} x_{ik}\, \beta_k(t_i)
   + z_i^\top \alpha + \varepsilon_i,
-  \quad
-  \alpha \sim N(0, \sigma_\alpha^2 I_q),
-  \quad
-  \varepsilon_i \sim N(0, \sigma_\varepsilon^2),
 }
 where each \eqn{\beta_k(t)} is a cubic B-spline with \code{n_basis}
-basis functions and a second-order difference penalty.
+basis functions and a second-order difference penalty, and
+\eqn{\alpha \sim N(0, \Sigma_\alpha)} with structure chosen by
+\code{re_cov}.
 
 \strong{Method selection.} The default is \code{method = "auto"},
 which picks \code{"csl"} when \eqn{N \cdot q > 10^5} or \eqn{q > 50}
-and \code{"ss"} otherwise. The CSL estimator is first-order
-equivalent to SS (Theorem 3.1 of the paper) while needing only one
-Newton step from a \eqn{\sqrt{N}}-consistent pilot; it dominates at
-scale. SS is the exact-MLE benchmark and the cleaner choice for
-small problems. Use \code{method = "csl"} or \code{method = "ss"}
-to override.
+and \code{"ss"} otherwise.
 
-\strong{Random-effects covariance.} Two structures are supported:
+\strong{Random-effects covariance.} Three structures:
 \itemize{
-\item \code{re_cov = "diag"} (default): \eqn{\alpha \sim N(0,
-    \sigma_\alpha^2 I_q)}. Smallest, fastest.
-\item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0, \Sigma_{2\times 2}
-    \otimes \Sigma_{\text{spatial}})} for origin-destination data.
-Each of \code{n_groups} districts has a 2-dimensional random
-effect (origin, destination), so \code{ncol(Z)} must equal
-\code{2 * n_groups}. When \code{control$update_variance = TRUE},
-the 2-by-2 origin-destination cross-effect covariance
-\code{Sigma_2x2} is re-estimated at every iteration from the
-column covariance of \code{matrix(alpha_hat, G, 2)}. The G-by-G
-spatial covariance \code{Sigma_spatial} is \strong{held fixed}
-at the user-supplied initial value (default \code{I_G}). The
-reason is identifiability: with a single \eqn{\hat\alpha}, the
-moment-based spatial estimator is rank-2 at most and iterating
-it is unstable. For real OD data, supply a parametric spatial
-kernel via \code{Sigma_spatial_init} (e.g.
-\code{exp(-D / phi)} for a known distance matrix \code{D}).
+\item \code{re_cov = "diag"}: \eqn{\alpha \sim N(0,
+    \sigma_\alpha^2 I_q)}.
+\item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0,
+    \Sigma_{\mathrm{left}} \otimes \Sigma_{\mathrm{right}})} with
+\eqn{\Sigma_{\mathrm{left}}} of size \code{q_left x q_left}
+(default \code{q_left = 2}; OD-style with origin / destination
+blocks). User-facing names \code{Sigma_2x2_init},
+\code{Sigma_spatial_init} are accepted as aliases.
+\item \code{re_cov = "separable"}: \eqn{\alpha \sim N(0,
+    \Sigma_q \otimes \Omega_G)} with \code{Sigma_q} of size
+\code{q_left x q_left} (required, no default) and \code{Omega_G}
+of size \eqn{G \times G}. User-facing names \code{Sigma_q_init},
+\code{Omega_G_init} are accepted as aliases for
+\code{Sigma_left_init}, \code{Sigma_right_init}.
 }
-(A third option, \code{"separable"} for group-shared dense random
-effects, is planned for a later release.)
+
+\strong{Column-stacking convention.} For \code{re_cov = "kronecker"}
+or \code{"separable"}, the random-effects vector is
+\eqn{\alpha = \mathrm{vec}_{\mathrm{col}}(M)} where
+\eqn{M \in \mathbb R^{G \times q_{\mathrm{left}}}}, i.e.\
+\code{alpha[(k - 1) * G + g] = M[g, k]}. The \code{Z} matrix must be
+constructed so that \code{Z \%*\% alpha} gives the correct random-effect
+contribution. \code{ncol(Z)} must equal \code{q_left * n_groups}.
+
+\strong{Identifiability of the right component.} The right-side
+covariance (\code{Sigma_spatial} / \code{Omega_G}) is not separately
+identifiable from a single \eqn{\hat\alpha}, so it is held fixed at
+the user-supplied initial value (default \eqn{I_G}). Supply a
+parametric kernel via \code{Sigma_right_init} (e.g., \code{exp(-D /
+phi)} for OD; AR(1) for separable). The left-side covariance
+(\code{Sigma_2x2} / \code{Sigma_q}) is updated every iteration via the
+EM-style estimator (Theorem 1 \eqn{M_\eta} rule) when
+\code{control$update_variance = TRUE}.
 }
 \examples{
-# ---- Single varying coefficient ---------------------------------------
 set.seed(1)
 n <- 500
 t  <- runif(n)
@@ -150,11 +175,6 @@ y  <- 2 + sin(2 * pi * t) * x +
 fit <- vcmm(y, X = x, Z = Z, t = t,
             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
 fit
-
-# ---- Force the SS estimator -------------------------------------------
-fit_ss_ref <- vcmm(y, X = x, Z = Z, t = t, method = "ss",
-                   control = vcmm_control(sigma_eps = 0.5,
-                                          sigma_alpha = 0.5))
 }
 \references{
 Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient

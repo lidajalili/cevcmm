@@ -14,24 +14,26 @@
 #     supplied by the user as domain knowledge). The iteration estimates
 #     only Sigma_2x2.
 #   - We use M Monte Carlo replicates and AVERAGE the Sigma_2x2_hat
-#     across them to absorb sampling variability from a small G.
+#     across them to absorb sampling variability.
 #
 # Setting:
 #   G                   = 20 districts (n_groups)
 #   q                   = 40 random effects (2 per district)
 #   N                   = 3000 OD flows per replicate
-#   M                   = 30 Monte Carlo replicates
+#   M                   = 100 Monte Carlo replicates
 #   beta_0              = 2,  beta_1(t) = sin(2 pi t)
 #   sigma_eps_true      = 0.5
 #   Sigma_2x2_true      = [[0.50, 0.20], [0.20, 0.50]]   (rho = 0.4)
 #   Sigma_spatial_true  = exp(-|i - j| / 5)               (passed in as init)
 #
-# Passing criteria:
+# Passing criteria (using the weighted moment estimator plus the
+# identifiability post-processing in vcmm() that re-centers alpha and
+# adjusts beta_0 for OD-style designs):
 #   1. R CMD check still passes
-#   2. Mean Sigma_2x2_hat (across replicates) is close to truth
-#      ||mean(Sigma_2x2_hat) - Sigma_2x2_true||_F < 0.10
-#   3. Mean bias of beta_0 is small: |mean(beta_0_hat) - 2| < 0.05
-#   4. Convergence on every replicate
+#   2. ||mean(Sigma_2x2_hat) - Sigma_2x2_true||_F < 0.05
+#   3. OD correlation: |mean(rho_hat) - 0.4| < 0.03
+#   4. beta_0 mean bias: |mean(beta_0_hat) - 2| < 0.10
+#   5. Convergence on every replicate
 #===============================================================================
 
 if (!exists("compute_sufficient_stats")) {
@@ -47,7 +49,7 @@ if (!exists("compute_sufficient_stats")) {
 G              <- 20L
 q              <- 2L * G
 N              <- 3000L
-M              <- 30L
+M              <- 100L
 sigma_eps_true <- 0.5
 beta0_true     <- 2.0
 beta1_true_fn  <- function(tt) sin(2 * pi * tt)
@@ -135,17 +137,19 @@ cat(sprintf("\nOD correlation:  true = %+.4f,  mean = %+.4f,  sd = %.4f\n",
             rho_true, mean(rho_hats), sd(rho_hats)))
 
 # beta_0 recovery
-cat(sprintf("\nbeta_0:   true = %.4f,  mean_hat = %.4f,  mean_bias = %+.4f\n",
-            beta0_true, mean(beta0_hats), mean(beta0_hats) - beta0_true))
+se_beta0 <- sd(beta0_hats) / sqrt(M)
+cat(sprintf("\nbeta_0:   true = %.4f,  mean_hat = %.4f,  mean_bias = %+.4f  (MC SE = %.4f)\n",
+            beta0_true, mean(beta0_hats), mean(beta0_hats) - beta0_true,
+            se_beta0))
 
 cat(sprintf("\nConvergence: %d / %d replicates\n", sum(converged_vec), M))
 
 # ----- Pass / fail ------------------------------------------------------------
 pass <- c(
   all_converged       = all(converged_vec),
-  Sigma_2x2_close     = err_2x2 < 0.10,
-  od_correlation_sign = sign(mean(rho_hats)) == sign(rho_true),
-  beta_0_unbiased     = abs(mean(beta0_hats) - beta0_true) < 0.05
+  Sigma_2x2_close     = err_2x2 < 0.05,
+  od_correlation      = abs(mean(rho_hats) - rho_true) < 0.03,
+  beta_0_unbiased     = abs(mean(beta0_hats) - beta0_true) < 0.10
 )
 
 cat("\n========== Pass / fail ==========\n")

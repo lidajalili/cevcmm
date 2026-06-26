@@ -2,47 +2,44 @@
 % Please edit documentation in R/covariance.R
 \name{estimate_kronecker_components}
 \alias{estimate_kronecker_components}
-\title{Moment-based estimator for Kronecker covariance components}
+\title{Moment-based estimator for the Kronecker left component}
 \usage{
-estimate_kronecker_components(alpha, n_groups)
+estimate_kronecker_components(alpha, n_groups, q_left = 2L, Sigma_right = NULL)
 }
 \arguments{
-\item{alpha}{Numeric vector of length \eqn{2G}.}
+\item{alpha}{Numeric vector of length \eqn{kG}.}
 
-\item{n_groups}{Integer \eqn{G}, the number of groups. Must satisfy
-\code{length(alpha) == 2 * n_groups}.}
+\item{n_groups}{Integer \eqn{G}.}
+
+\item{q_left}{Integer \eqn{k}, the left (within) dimension. Defaults to
+2 for backward compatibility with the OD setting.}
+
+\item{Sigma_right}{Optional \eqn{G \times G} positive-definite covariance.
+If \code{NULL}, the unweighted sample covariance \code{cov(alpha_mat)}
+is returned (unbiased only when rows are uncorrelated).}
 }
 \value{
-A list with elements:
-\itemize{
-\item \code{Sigma_2x2}: 2 by 2 symmetric positive-definite matrix.
-\item \code{Sigma_spatial}: G by G symmetric positive-definite
-correlation matrix (unit diagonal).
-}
+A \eqn{k \times k} symmetric positive-definite matrix.
 }
 \description{
-Given a length-\eqn{2G} random-effects estimate
-\eqn{\hat\alpha = \mathrm{vec}(G \times 2\ \mathrm{matrix})} (column 1
-= origin effects, column 2 = destination effects), returns
-moment-based estimates of \code{Sigma_2x2} and \code{Sigma_spatial}
-that together specify \eqn{\hat\Sigma_\alpha = \Sigma_{2\times 2}
-\otimes \Sigma_{\text{spatial}}}.
+Given a length-\eqn{kG} random-effects estimate
+\eqn{\hat\alpha = \mathrm{vec}_{\mathrm{col}}(M)} (column-stacked,
+\eqn{M \in \mathbb R^{G \times k}}) and the right-side covariance
+\code{Sigma_right}, returns the weighted moment estimate
+\deqn{\hat\Sigma_{\mathrm{left}} =
+  \tfrac{1}{G}\, M^{\top}\, \Sigma_{\mathrm{right}}^{-1}\, M.}
 }
 \details{
-This is the \eqn{M_\eta} update rule the paper permits (one of several
-allowed choices listed alongside ML, REML, quasi-likelihood, and
-Fisher-scoring). It is the form actually used in the simulation code's
-post-hoc covariance estimator, lifted into the iterative loop here so
-that the package works for real OD data where \eqn{\Sigma_\alpha} is
-unknown.
+This is unbiased under the Kronecker model
+\eqn{\alpha \sim N(0, \Sigma_{\mathrm{left}} \otimes
+\Sigma_{\mathrm{right}})} when \code{Sigma_right} is correct.
+When \eqn{\hat\alpha} is the BLUP rather than the true \eqn{\alpha},
+apply the EM-style correction in \code{\link{vcmm}} (handled
+automatically by \code{fit_ss} / \code{fit_csl}).
 
-\strong{Identifiability caveat.} With only one \eqn{\hat\alpha}
-sample, the spatial component is reconstructed from a rank-1
-quantity. The output captures the dominant spatial pattern in
-\eqn{\hat\alpha} but is a low-rank approximation rather than a full
-rank-G covariance. For applications where a parametric spatial
-kernel is available, supply it via \code{Sigma_spatial_init} in
-\code{vcmm()} and fit with \code{update_variance = FALSE}.
+Backwards-compatible alias: if \code{q_left = 2} (the default), this is
+the same estimator as the previous \code{estimate_kronecker_components}
+for the OD setting.
 }
 \references{
 Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient

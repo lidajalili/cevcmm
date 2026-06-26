@@ -3,13 +3,19 @@
 # Varying Coefficient Mixed-Effects Model
 #
 # Wraps:
-#   build_vcmm_design()   -> X_design, penalty
+#   build_vcmm_design()        -> X_design, penalty
 #   compute_sufficient_stats() -> aggregated SS
-#   fit_ss() or fit_csl() -> the chosen estimator
+#   fit_ss() or fit_csl()      -> the chosen estimator
 #
-# Returns a vcmm_fit object enriched with design metadata so that
-# downstream predict() / coef() / plot() (coming Days 11-13) can
-# reconstruct the basis at new t values.
+# Three re_cov modes supported:
+#   "diag"      -- alpha ~ N(0, sigma_alpha^2 I_q)        (simplest)
+#   "kronecker" -- alpha ~ N(0, Sigma_left ⊗ Sigma_right) (OD-style)
+#   "separable" -- alpha ~ N(0, Sigma_q ⊗ Omega_G)        (group-shared dense)
+#
+# "kronecker" and "separable" share the same internal Kronecker machinery
+# (in covariance.R) with q_left = 2 the default for OD-style and required
+# (no default) for separable. See ?vcmm for the column-stacking convention
+# expected of Z and the initial covariance matrices.
 #===============================================================================
 
 #' Fit a Varying Coefficient Mixed-Effects Model
@@ -25,90 +31,106 @@
 #'   y_i
 #'   = \beta_0(t_i) + \sum_{k=1}^{K} x_{ik}\, \beta_k(t_i)
 #'   + z_i^\top \alpha + \varepsilon_i,
-#'   \quad
-#'   \alpha \sim N(0, \sigma_\alpha^2 I_q),
-#'   \quad
-#'   \varepsilon_i \sim N(0, \sigma_\varepsilon^2),
 #' }
 #' where each \eqn{\beta_k(t)} is a cubic B-spline with \code{n_basis}
-#' basis functions and a second-order difference penalty.
+#' basis functions and a second-order difference penalty, and
+#' \eqn{\alpha \sim N(0, \Sigma_\alpha)} with structure chosen by
+#' \code{re_cov}.
 #'
 #' \strong{Method selection.} The default is \code{method = "auto"},
 #' which picks \code{"csl"} when \eqn{N \cdot q > 10^5} or \eqn{q > 50}
-#' and \code{"ss"} otherwise. The CSL estimator is first-order
-#' equivalent to SS (Theorem 3.1 of the paper) while needing only one
-#' Newton step from a \eqn{\sqrt{N}}-consistent pilot; it dominates at
-#' scale. SS is the exact-MLE benchmark and the cleaner choice for
-#' small problems. Use \code{method = "csl"} or \code{method = "ss"}
-#' to override.
+#' and \code{"ss"} otherwise.
 #'
-#' \strong{Random-effects covariance.} Two structures are supported:
+#' \strong{Random-effects covariance.} Three structures:
 #' \itemize{
-#'   \item \code{re_cov = "diag"} (default): \eqn{\alpha \sim N(0,
-#'     \sigma_\alpha^2 I_q)}. Smallest, fastest.
-#'   \item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0, \Sigma_{2\times 2}
-#'     \otimes \Sigma_{\text{spatial}})} for origin-destination data.
-#'     Each of \code{n_groups} districts has a 2-dimensional random
-#'     effect (origin, destination), so \code{ncol(Z)} must equal
-#'     \code{2 * n_groups}. When \code{control$update_variance = TRUE},
-#'     the 2-by-2 origin-destination cross-effect covariance
-#'     \code{Sigma_2x2} is re-estimated at every iteration from the
-#'     column covariance of \code{matrix(alpha_hat, G, 2)}. The G-by-G
-#'     spatial covariance \code{Sigma_spatial} is \strong{held fixed}
-#'     at the user-supplied initial value (default \code{I_G}). The
-#'     reason is identifiability: with a single \eqn{\hat\alpha}, the
-#'     moment-based spatial estimator is rank-2 at most and iterating
-#'     it is unstable. For real OD data, supply a parametric spatial
-#'     kernel via \code{Sigma_spatial_init} (e.g.
-#'     \code{exp(-D / phi)} for a known distance matrix \code{D}).
+#'   \item \code{re_cov = "diag"}: \eqn{\alpha \sim N(0,
+#'     \sigma_\alpha^2 I_q)}.
+#'   \item \code{re_cov = "kronecker"}: \eqn{\alpha \sim N(0,
+#'     \Sigma_{\mathrm{left}} \otimes \Sigma_{\mathrm{right}})} with
+#'     \eqn{\Sigma_{\mathrm{left}}} of size \code{q_left x q_left}
+#'     (default \code{q_left = 2}; OD-style with origin / destination
+#'     blocks). User-facing names \code{Sigma_2x2_init},
+#'     \code{Sigma_spatial_init} are accepted as aliases.
+#'   \item \code{re_cov = "separable"}: \eqn{\alpha \sim N(0,
+#'     \Sigma_q \otimes \Omega_G)} with \code{Sigma_q} of size
+#'     \code{q_left x q_left} (required, no default) and \code{Omega_G}
+#'     of size \eqn{G \times G}. User-facing names \code{Sigma_q_init},
+#'     \code{Omega_G_init} are accepted as aliases for
+#'     \code{Sigma_left_init}, \code{Sigma_right_init}.
 #' }
-#' (A third option, \code{"separable"} for group-shared dense random
-#' effects, is planned for a later release.)
+#'
+#' \strong{Column-stacking convention.} For \code{re_cov = "kronecker"}
+#' or \code{"separable"}, the random-effects vector is
+#' \eqn{\alpha = \mathrm{vec}_{\mathrm{col}}(M)} where
+#' \eqn{M \in \mathbb R^{G \times q_{\mathrm{left}}}}, i.e.\
+#' \code{alpha[(k - 1) * G + g] = M[g, k]}. The \code{Z} matrix must be
+#' constructed so that \code{Z \%*\% alpha} gives the correct random-effect
+#' contribution. \code{ncol(Z)} must equal \code{q_left * n_groups}.
+#'
+#' \strong{Identifiability of the right component.} The right-side
+#' covariance (\code{Sigma_spatial} / \code{Omega_G}) is not separately
+#' identifiable from a single \eqn{\hat\alpha}, so it is held fixed at
+#' the user-supplied initial value (default \eqn{I_G}). Supply a
+#' parametric kernel via \code{Sigma_right_init} (e.g., \code{exp(-D /
+#' phi)} for OD; AR(1) for separable). The left-side covariance
+#' (\code{Sigma_2x2} / \code{Sigma_q}) is updated every iteration via the
+#' EM-style estimator (Theorem 1 \eqn{M_\eta} rule) when
+#' \code{control$update_variance = TRUE}.
 #'
 #' @param y Numeric response vector of length \eqn{n}.
 #' @param X Numeric \eqn{n \times K} matrix (or length-\eqn{n} vector if
 #'   \eqn{K = 1}) of covariates that get varying coefficients in
 #'   \code{t}.
 #' @param Z Numeric \eqn{n \times q} random-effects design matrix.
-#'   For \code{re_cov = "kronecker"}, \eqn{q} must equal
-#'   \code{2 * n_groups}.
+#'   For \code{re_cov = "kronecker"} or \code{"separable"}, \eqn{q} must
+#'   equal \code{q_left * n_groups}.
 #' @param t Numeric vector of length \eqn{n} in which the coefficients
 #'   vary smoothly.
 #' @param method Character: \code{"auto"} (default), \code{"csl"}, or
-#'   \code{"ss"}. See Details.
-#' @param re_cov Character: random-effects covariance structure;
-#'   \code{"diag"} (default) or \code{"kronecker"}. See Details.
-#' @param n_groups Integer. Number of groups for
-#'   \code{re_cov = "kronecker"} only. Must satisfy
-#'   \code{ncol(Z) == 2 * n_groups}. Ignored otherwise.
-#' @param Sigma_2x2_init Optional 2 by 2 initial Sigma_2x2 (only used
-#'   for \code{re_cov = "kronecker"}). Defaults to
-#'   \code{sigma_alpha^2 * I_2}. With \code{update_variance = TRUE} the
-#'   final estimate is data-driven; the initial value only affects
-#'   iteration 1.
-#' @param Sigma_spatial_init Optional G by G initial Sigma_spatial
-#'   (only used for \code{re_cov = "kronecker"}). Defaults to
-#'   \code{I_G}. With \code{update_variance = TRUE} the final estimate
-#'   is data-driven; the initial value only affects iteration 1.
+#'   \code{"ss"}.
+#' @param re_cov Character: \code{"diag"} (default), \code{"kronecker"},
+#'   or \code{"separable"}. See Details.
+#' @param n_groups Integer \eqn{G}. Required for \code{"kronecker"} and
+#'   \code{"separable"}.
+#' @param q_left Integer. The left (within) dimension of the Kronecker
+#'   factor. For \code{re_cov = "kronecker"} defaults to 2 (OD setting);
+#'   for \code{re_cov = "separable"} this is the per-group random-effect
+#'   dimension and \strong{must be supplied}.
+#' @param Sigma_left_init Optional \eqn{k \times k} initial left
+#'   covariance (\eqn{k = q_{\mathrm{left}}}). Aliases accepted:
+#'   \code{Sigma_2x2_init} (for \code{"kronecker"} with \code{q_left =
+#'   2}) and \code{Sigma_q_init} (for \code{"separable"}). Default is
+#'   \code{sigma_alpha^2 * I_k}.
+#' @param Sigma_right_init Optional \eqn{G \times G} initial right
+#'   covariance. Aliases accepted: \code{Sigma_spatial_init} (for
+#'   \code{"kronecker"}) and \code{Omega_G_init} (for \code{"separable"}).
+#'   Default is \eqn{I_G}.
+#' @param Sigma_2x2_init Legacy alias for \code{Sigma_left_init} when
+#'   \code{re_cov = "kronecker"} and \code{q_left = 2}.
+#' @param Sigma_spatial_init Legacy alias for \code{Sigma_right_init}
+#'   when \code{re_cov = "kronecker"}.
+#' @param Sigma_q_init Alias for \code{Sigma_left_init} when
+#'   \code{re_cov = "separable"}.
+#' @param Omega_G_init Alias for \code{Sigma_right_init} when
+#'   \code{re_cov = "separable"}.
 #' @param n_basis Integer or \code{NULL}. Number of B-spline basis
-#'   functions per varying coefficient. \code{NULL} (default)
-#'   auto-picks \code{max(floor(n^(1/3)) + 4, 10)}.
+#'   functions per varying coefficient. \code{NULL} (default) auto-picks
+#'   \code{max(floor(n^(1/3)) + 4, 10)}.
 #' @param degree Integer. B-spline degree (default 3 = cubic).
-#' @param lambda Non-negative numeric. Smoothing parameter for the
-#'   penalty (default 1).
-#' @param control A \code{vcmm_control} object with fitting options.
-#'   Pass \code{vcmm_control()} for defaults.
+#' @param lambda Non-negative numeric. Smoothing parameter (default 1).
+#' @param control A \code{vcmm_control} object.
 #' @param normalize_t Logical. If \code{TRUE} (default), \code{t} is
 #'   linearly mapped to \code{[0, 1]} before building the basis.
-#' @param ... Further arguments passed to \code{fit_csl()} (e.g.
-#'   \code{pilot_max_iter}) when CSL is used. Ignored under SS.
+#' @param ... Further arguments passed to \code{fit_csl()} when CSL is
+#'   used.
 #'
-#' @return A \code{vcmm_fit} object (same class as the output of
-#'   \code{fit_ss()} / \code{fit_csl()}) with an additional
-#'   \code{design} element carrying the spline knots, degree, and
-#'   \code{K} so that downstream prediction can reconstruct the basis,
-#'   and a \code{K_inv} element holding the cached inverse Hessian
-#'   used by \code{vcov()} and \code{summary()}.
+#' @return A \code{vcmm_fit} object as returned by \code{fit_ss()} or
+#'   \code{fit_csl()}, augmented with \code{design} (basis metadata) and
+#'   \code{re_cov}. When \code{re_cov} is \code{"kronecker"} or
+#'   \code{"separable"}, \code{re_cov_state} contains the canonical
+#'   fields \code{Sigma_left}, \code{Sigma_right}, plus legacy aliases
+#'   \code{Sigma_2x2}/\code{Sigma_spatial} (when \code{q_left = 2}) or
+#'   \code{Sigma_q}/\code{Omega_G} (for separable).
 #'
 #' @references
 #' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
@@ -117,7 +139,6 @@
 #' @export
 #'
 #' @examples
-#' # ---- Single varying coefficient ---------------------------------------
 #' set.seed(1)
 #' n <- 500
 #' t  <- runif(n)
@@ -130,11 +151,6 @@
 #' fit <- vcmm(y, X = x, Z = Z, t = t,
 #'             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
 #' fit
-#'
-#' # ---- Force the SS estimator -------------------------------------------
-#' fit_ss_ref <- vcmm(y, X = x, Z = Z, t = t, method = "ss",
-#'                    control = vcmm_control(sigma_eps = 0.5,
-#'                                           sigma_alpha = 0.5))
 vcmm <- function(y,
                  X,
                  Z,
@@ -142,8 +158,13 @@ vcmm <- function(y,
                  method             = c("auto", "csl", "ss"),
                  re_cov             = c("diag", "kronecker", "separable"),
                  n_groups           = NULL,
+                 q_left             = NULL,
+                 Sigma_left_init    = NULL,
+                 Sigma_right_init   = NULL,
                  Sigma_2x2_init     = NULL,
                  Sigma_spatial_init = NULL,
+                 Sigma_q_init       = NULL,
+                 Omega_G_init       = NULL,
                  n_basis            = NULL,
                  degree             = 3L,
                  lambda             = 1,
@@ -154,11 +175,6 @@ vcmm <- function(y,
   # ----- Argument matching and basic validation ---------------------------
   method <- match.arg(method)
   re_cov <- match.arg(re_cov)
-
-  if (re_cov == "separable") {
-    stop("re_cov = 'separable' is not yet implemented; planned for a later release.",
-         call. = FALSE)
-  }
 
   if (!is.numeric(y)) {
     stop("`y` must be a numeric vector.", call. = FALSE)
@@ -183,51 +199,108 @@ vcmm <- function(y,
 
   # ----- re_cov-specific validation and initial state --------------------
   re_cov_state <- NULL
-  if (re_cov == "kronecker") {
+
+  if (re_cov == "kronecker" || re_cov == "separable") {
+    # n_groups required for both
     if (is.null(n_groups) ||
         !is.numeric(n_groups) || length(n_groups) != 1L ||
         n_groups < 1L || n_groups != as.integer(n_groups)) {
-      stop("re_cov = 'kronecker' requires `n_groups` (a single positive integer).",
-           call. = FALSE)
+      stop(sprintf(
+        "re_cov = '%s' requires `n_groups` (a single positive integer).",
+        re_cov),
+        call. = FALSE)
     }
     n_groups <- as.integer(n_groups)
-    if (q_dim != 2L * n_groups) {
+
+    # Resolve q_left
+    if (re_cov == "kronecker") {
+      if (is.null(q_left)) {
+        q_left <- 2L                       # OD-style default
+      }
+    } else { # separable
+      if (is.null(q_left)) {
+        stop("re_cov = 'separable' requires `q_left` (per-group random-effect dimension).",
+             call. = FALSE)
+      }
+    }
+    if (!is.numeric(q_left) || length(q_left) != 1L ||
+        q_left < 1L || q_left != as.integer(q_left)) {
+      stop("`q_left` must be a single positive integer.", call. = FALSE)
+    }
+    q_left <- as.integer(q_left)
+
+    # Shape check on Z
+    if (q_dim != q_left * n_groups) {
       stop(sprintf(
-        "For re_cov = 'kronecker', ncol(Z) must equal 2 * n_groups; got ncol(Z) = %d and n_groups = %d.",
-        q_dim, n_groups),
+        "For re_cov = '%s', ncol(Z) must equal q_left * n_groups = %d * %d = %d; got ncol(Z) = %d.",
+        re_cov, q_left, n_groups, q_left * n_groups, q_dim),
         call. = FALSE)
     }
 
-    # Default initial Sigma matrices: identity for both
-    # (steady-state value will be estimated from data if update_variance = TRUE)
-    if (is.null(Sigma_2x2_init)) {
-      Sigma_2x2_init <- (control$sigma_alpha^2) * diag(2L)
+    # ----- Resolve Sigma_left_init from canonical + aliases --------------
+    Sigma_left_aliases  <- list(
+      Sigma_left_init = Sigma_left_init,
+      Sigma_2x2_init  = Sigma_2x2_init,
+      Sigma_q_init    = Sigma_q_init
+    )
+    supplied_left <- names(Sigma_left_aliases)[!vapply(
+      Sigma_left_aliases, is.null, logical(1L))]
+    if (length(supplied_left) > 1L) {
+      stop(sprintf(
+        "Pass only ONE of: %s.", paste(supplied_left, collapse = ", ")),
+        call. = FALSE)
     }
-    if (is.null(Sigma_spatial_init)) {
-      Sigma_spatial_init <- diag(n_groups)
+    if (length(supplied_left) == 1L) {
+      Sigma_left_init <- Sigma_left_aliases[[supplied_left]]
     }
-    if (!isTRUE(all.equal(dim(Sigma_2x2_init), c(2L, 2L)))) {
-      stop("`Sigma_2x2_init` must be a 2 by 2 matrix.", call. = FALSE)
+    if (is.null(Sigma_left_init)) {
+      Sigma_left_init <- (control$sigma_alpha^2) * diag(q_left)
     }
-    if (!isTRUE(all.equal(dim(Sigma_spatial_init),
-                          c(n_groups, n_groups)))) {
-      stop(sprintf("`Sigma_spatial_init` must be %d by %d.",
-                   n_groups, n_groups),
-           call. = FALSE)
+    if (!is.matrix(Sigma_left_init) ||
+        !isTRUE(all.equal(dim(Sigma_left_init), c(q_left, q_left)))) {
+      stop(sprintf("`Sigma_left_init` (or its alias) must be %d by %d.",
+                   q_left, q_left), call. = FALSE)
+    }
+
+    # ----- Resolve Sigma_right_init from canonical + aliases -------------
+    Sigma_right_aliases <- list(
+      Sigma_right_init   = Sigma_right_init,
+      Sigma_spatial_init = Sigma_spatial_init,
+      Omega_G_init       = Omega_G_init
+    )
+    supplied_right <- names(Sigma_right_aliases)[!vapply(
+      Sigma_right_aliases, is.null, logical(1L))]
+    if (length(supplied_right) > 1L) {
+      stop(sprintf(
+        "Pass only ONE of: %s.", paste(supplied_right, collapse = ", ")),
+        call. = FALSE)
+    }
+    if (length(supplied_right) == 1L) {
+      Sigma_right_init <- Sigma_right_aliases[[supplied_right]]
+    }
+    if (is.null(Sigma_right_init)) {
+      Sigma_right_init <- diag(n_groups)
+    }
+    if (!is.matrix(Sigma_right_init) ||
+        !isTRUE(all.equal(dim(Sigma_right_init), c(n_groups, n_groups)))) {
+      stop(sprintf("`Sigma_right_init` (or its alias) must be %d by %d.",
+                   n_groups, n_groups), call. = FALSE)
     }
 
     re_cov_state <- .new_re_cov_state(
-      type          = "kronecker",
-      Sigma_2x2     = Sigma_2x2_init,
-      Sigma_spatial = Sigma_spatial_init,
-      n_groups      = n_groups
+      type        = re_cov,
+      Sigma_left  = Sigma_left_init,
+      Sigma_right = Sigma_right_init,
+      n_groups    = n_groups,
+      q_left      = q_left
     )
 
     if (!isTRUE(control$update_variance)) {
       message(
-        "Note: re_cov = 'kronecker' is typically run with control$update_variance = TRUE ",
-        "so that Sigma_2x2 and Sigma_spatial are estimated from the data. ",
-        "Pass vcmm_control(..., update_variance = TRUE) to enable iterative estimation."
+        "Note: re_cov = '", re_cov, "' is typically run with ",
+        "control$update_variance = TRUE so that Sigma_left is estimated ",
+        "from the data. Pass vcmm_control(..., update_variance = TRUE) ",
+        "to enable iterative estimation."
       )
     }
   }
@@ -278,6 +351,23 @@ vcmm <- function(y,
                          "degree", "n_basis", "K", "lambda",
                          "normalize_t", "t_min", "t_max")]
   fit$re_cov <- re_cov
+
+  # ----- Identifiability post-processing ----------------------------------
+  # When rowSums(Z) is constant (OD-style designs, ANOVA designs, etc.),
+  # the model y = beta_0 + Z alpha + ... is unidentified along
+  #   (beta_0, alpha) -> (beta_0 - s c, alpha + c 1).
+  # Re-distribute the slack so sum(alpha_hat) = 0 and beta_0 absorbs the
+  # shift. Zero-cost adjustment along the unidentified direction.
+  row_sums <- rowSums(Z)
+  if (max(row_sums) - min(row_sums) < 1e-10) {
+    s_const <- row_sums[1L]
+    if (abs(s_const) > 1e-10) {
+      alpha_shift <- mean(fit$alpha)
+      fit$alpha   <- fit$alpha - alpha_shift
+      fit$beta[1L] <- fit$beta[1L] + s_const * alpha_shift
+    }
+  }
+
   fit$call <- match.call()
   fit
 }

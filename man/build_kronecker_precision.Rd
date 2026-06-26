@@ -4,29 +4,28 @@
 \alias{build_kronecker_precision}
 \title{Build the Kronecker-structured random-effect precision matrix}
 \usage{
-build_kronecker_precision(Sigma_2x2, Sigma_spatial, sigma_eps)
+build_kronecker_precision(Sigma_left, Sigma_right, sigma_eps)
 }
 \arguments{
-\item{Sigma_2x2}{A 2 by 2 positive-definite numeric matrix.}
+\item{Sigma_left}{A \eqn{k \times k} positive-definite numeric matrix
+(\eqn{k = 2} for OD-style; arbitrary \eqn{k} for general separable).}
 
-\item{Sigma_spatial}{A G by G positive-definite numeric matrix
-describing spatial correlation across G groups.}
+\item{Sigma_right}{A \eqn{G \times G} positive-definite numeric matrix.}
 
-\item{sigma_eps}{Positive numeric. Residual standard deviation
-(used to scale the precision into the implicit-loss parametrisation
-that fit_ss and fit_csl share).}
+\item{sigma_eps}{Positive numeric. Residual standard deviation.}
 }
 \value{
-A 2G by 2G numeric matrix.
+A \eqn{kG \times kG} numeric matrix.
 }
 \description{
-For Sigma_alpha = Sigma_2x2 \\%x\\% Sigma_spatial (the OD setting), returns
+For \eqn{\Sigma_\alpha = \Sigma_{\mathrm{left}} \otimes \Sigma_{\mathrm{right}}}
+(column-stacking convention), returns
 \deqn{
   \sigma_\varepsilon^2 \cdot
-  (\Sigma_{2 \times 2}^{-1} \otimes \Sigma_{\text{spatial}}^{-1})
+  (\Sigma_{\mathrm{left}}^{-1} \otimes \Sigma_{\mathrm{right}}^{-1})
 }
-which is added to \code{crossprod(Z)} inside the random-effect block of the
-VCMM Hessian. This is the structured analogue of
+which is added to \code{crossprod(Z)} inside the random-effect block of
+the VCMM Hessian. This is the structured analogue of
 \code{(sigma_eps^2 / sigma_alpha^2) * I_q} used under
 \code{re_cov = "diag"}.
 }

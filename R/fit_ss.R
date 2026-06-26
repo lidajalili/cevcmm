@@ -200,6 +200,14 @@ fit_ss <- function(stats, penalty, control = vcmm_control(),
   K_final <- (K_final + t(K_final)) / 2   # numerical symmetry
   K_inv   <- invert_matrix(K_final, q = p + q)
 
+  ## EM-style correction for the Kronecker / separable prior covariance.
+  ## Removes the BLUP shrinkage bias in Sigma_left by adding the
+  ## posterior-variance partial-trace term, using K_inv we just built.
+  ## No-op for re_cov = "diag" or when update_variance = FALSE.
+  re_cov_state <- .apply_em_correction_if_kronecker(
+    re_cov_state, alpha, sigma_eps, K_inv, p, q, control
+  )
+
   if (control$verbose) {
     cat(sprintf("  [SS] converged=%s | iter=%d | elapsed=%.4fs\n",
                 converged, iter, elapsed))
@@ -251,17 +259,44 @@ print.vcmm_fit <- function(x, ...) {
 
   cat(sprintf("  sigma_eps   : %.4f\n", x$sigma_eps))
 
-  if (identical(x$re_cov, "kronecker") && !is.null(x$re_cov_state)) {
-    S2 <- x$re_cov_state$Sigma_2x2
-    rho <- if (S2[1, 1] > 0 && S2[2, 2] > 0) {
-      S2[1, 2] / sqrt(S2[1, 1] * S2[2, 2])
-    } else NA_real_
-    cat("  Sigma_2x2   :\n")
-    cat(sprintf("    [%.4f  %.4f]\n", S2[1, 1], S2[1, 2]))
-    cat(sprintf("    [%.4f  %.4f]\n", S2[2, 1], S2[2, 2]))
-    cat(sprintf("  OD corr     : %.4f\n", rho))
-    G <- nrow(x$re_cov_state$Sigma_spatial)
-    cat(sprintf("  Sigma_spatial: %d x %d (G = %d groups)\n", G, G, G))
+  is_kron_state <- !is.null(x$re_cov_state) &&
+    (identical(x$re_cov_state$type, "kronecker") ||
+     identical(x$re_cov_state$type, "separable"))
+
+  if (is_kron_state) {
+    k <- x$re_cov_state$q_left
+    G <- x$re_cov_state$n_groups
+    SL <- x$re_cov_state$Sigma_left
+
+    if (identical(x$re_cov, "kronecker") && identical(as.integer(k), 2L)) {
+      ## OD-style display: full 2x2 plus the correlation.
+      rho <- if (SL[1, 1] > 0 && SL[2, 2] > 0) {
+        SL[1, 2] / sqrt(SL[1, 1] * SL[2, 2])
+      } else NA_real_
+      cat("  Sigma_2x2   :\n")
+      cat(sprintf("    [%.4f  %.4f]\n", SL[1, 1], SL[1, 2]))
+      cat(sprintf("    [%.4f  %.4f]\n", SL[2, 1], SL[2, 2]))
+      cat(sprintf("  OD corr     : %.4f\n", rho))
+      cat(sprintf("  Sigma_spatial: %d x %d (G = %d groups)\n", G, G, G))
+    } else {
+      ## General display for q_left > 2 or re_cov = "separable":
+      ## show dimensions, diagonal range, mean abs off-diag correlation.
+      sl_diag <- diag(SL)
+      d_sd <- sqrt(pmax(sl_diag, 0))
+      if (all(d_sd > 0)) {
+        Corr <- SL / outer(d_sd, d_sd)
+        off  <- Corr[lower.tri(Corr)]
+        mean_abs_corr <- mean(abs(off))
+      } else {
+        mean_abs_corr <- NA_real_
+      }
+      left_name  <- if (identical(x$re_cov, "separable")) "Sigma_q" else "Sigma_left"
+      right_name <- if (identical(x$re_cov, "separable")) "Omega_G" else "Sigma_right"
+      cat(sprintf("  %-12s: %d x %d  (diag range %.4f .. %.4f, |corr| ~ %.3f)\n",
+                  left_name, k, k, min(sl_diag), max(sl_diag), mean_abs_corr))
+      cat(sprintf("  %-12s: %d x %d (G = %d groups, held fixed)\n",
+                  right_name, G, G, G))
+    }
   } else {
     cat(sprintf("  sigma_alpha : %.4f\n", x$sigma_alpha))
   }

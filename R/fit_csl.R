@@ -263,6 +263,14 @@ fit_csl <- function(stats,
     }
   }
 
+  ## EM-style correction for the Kronecker / separable prior covariance.
+  ## Overrides the moment-based update above with the unbiased
+  ## posterior-variance-corrected estimator, using the K_inv we just built.
+  ## No-op for re_cov = "diag" or when update_variance = FALSE.
+  re_cov_state <- .apply_em_correction_if_kronecker(
+    re_cov_state, alpha_csl, sigma_eps, K_inv, p, q, control
+  )
+
   step_elapsed  <- as.numeric((proc.time() - start_step)["elapsed"])
   total_elapsed <- as.numeric((proc.time() - start_total)["elapsed"])
 
