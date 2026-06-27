@@ -4,39 +4,50 @@
 \alias{varying_coef}
 \title{Evaluate the varying coefficient(s) at new t values}
 \usage{
-varying_coef(object, t_new, k = NULL, ...)
+varying_coef(object, t_new, k = NULL, se.fit = FALSE, ...)
 }
 \arguments{
 \item{object}{A \code{vcmm_fit} object.}
 
-\item{t_new}{Numeric vector at which to evaluate the varying
-coefficient(s). The package's normalisation
-(\code{normalize_t} / \code{t_min} / \code{t_max} stored on the fit)
-is applied internally, so \code{t_new} should be on the same scale
-as the original \code{t}.}
+\item{t_new}{Numeric vector at which to evaluate. Same scale as the
+original \code{t}; the package's normalisation is applied
+internally.}
 
 \item{k}{Integer vector of which varying coefficients to evaluate
-(1-based). Default \code{NULL} = all \code{K} of them.}
+(1-based). Default \code{NULL} = all \code{K}.}
+
+\item{se.fit}{Logical. If \code{TRUE}, also returns pointwise
+standard errors.}
 
 \item{...}{Unused.}
 }
 \value{
-A numeric matrix with \code{length(t_new)} rows and
-\code{length(k)} columns, named \code{"beta_1(t)", ...}.
+Either a numeric matrix (\code{length(t_new)} by
+\code{length(k)}, default), or a list with components \code{fit}
+and \code{se.fit} when \code{se.fit = TRUE}.
 }
 \description{
 For a VCMM with varying coefficients \eqn{\beta_k(t), k = 1, ..., K},
 this function evaluates \eqn{\hat\beta_k(t)} at any vector of
 \code{t_new} values, using the same B-spline basis the fit was built
 on. Useful for diagnostic plots, predictions, and reporting; the
-Day-13 plot method will use it internally (not yet exported).
+Day-13 plot method uses it internally.
 }
 \details{
 The constant intercept \eqn{\hat\beta_0} is \emph{not} returned (it
 does not vary in \code{t}); use \code{\link{fixef}(fit)\$intercept}
 for that.
+
+Pointwise standard errors are available via \code{se.fit = TRUE},
+computed as
+\deqn{
+  \mathrm{SE}(\hat\beta_k(t)) =
+  \sqrt{B(t)^\top \widehat{\mathrm{Var}}(\beta_{(k)})\, B(t)}
+}
+where \eqn{\beta_{(k)}} is the basis-coefficient sub-vector for
+coefficient \eqn{k} and the covariance comes from
+\code{vcov(object, which = "beta")}.
 }
 \seealso{
-\code{\link{fixef.vcmm_fit}} for the basis coefficients,
-\code{\link{coef.vcmm_fit}} for the flat coefficient vector.
+\code{\link{fixef.vcmm_fit}}, \code{\link{coef.vcmm_fit}}.
 }

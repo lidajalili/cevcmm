@@ -285,30 +285,40 @@ ranef.vcmm_fit <- function(object, ...) {
 #' this function evaluates \eqn{\hat\beta_k(t)} at any vector of
 #' \code{t_new} values, using the same B-spline basis the fit was built
 #' on. Useful for diagnostic plots, predictions, and reporting; the
-#' Day-13 plot method will use it internally (not yet exported).
+#' Day-13 plot method uses it internally.
 #'
 #' The constant intercept \eqn{\hat\beta_0} is \emph{not} returned (it
 #' does not vary in \code{t}); use \code{\link{fixef}(fit)\$intercept}
 #' for that.
 #'
+#' Pointwise standard errors are available via \code{se.fit = TRUE},
+#' computed as
+#' \deqn{
+#'   \mathrm{SE}(\hat\beta_k(t)) =
+#'   \sqrt{B(t)^\top \widehat{\mathrm{Var}}(\beta_{(k)})\, B(t)}
+#' }
+#' where \eqn{\beta_{(k)}} is the basis-coefficient sub-vector for
+#' coefficient \eqn{k} and the covariance comes from
+#' \code{vcov(object, which = "beta")}.
+#'
 #' @param object A \code{vcmm_fit} object.
-#' @param t_new Numeric vector at which to evaluate the varying
-#'   coefficient(s). The package's normalisation
-#'   (\code{normalize_t} / \code{t_min} / \code{t_max} stored on the fit)
-#'   is applied internally, so \code{t_new} should be on the same scale
-#'   as the original \code{t}.
+#' @param t_new Numeric vector at which to evaluate. Same scale as the
+#'   original \code{t}; the package's normalisation is applied
+#'   internally.
 #' @param k Integer vector of which varying coefficients to evaluate
-#'   (1-based). Default \code{NULL} = all \code{K} of them.
+#'   (1-based). Default \code{NULL} = all \code{K}.
+#' @param se.fit Logical. If \code{TRUE}, also returns pointwise
+#'   standard errors.
 #' @param ... Unused.
 #'
-#' @return A numeric matrix with \code{length(t_new)} rows and
-#'   \code{length(k)} columns, named \code{"beta_1(t)", ...}.
+#' @return Either a numeric matrix (\code{length(t_new)} by
+#'   \code{length(k)}, default), or a list with components \code{fit}
+#'   and \code{se.fit} when \code{se.fit = TRUE}.
 #'
-#' @seealso \code{\link{fixef.vcmm_fit}} for the basis coefficients,
-#'   \code{\link{coef.vcmm_fit}} for the flat coefficient vector.
+#' @seealso \code{\link{fixef.vcmm_fit}}, \code{\link{coef.vcmm_fit}}.
 #'
 #' @export
-varying_coef <- function(object, t_new, k = NULL, ...) {
+varying_coef <- function(object, t_new, k = NULL, se.fit = FALSE, ...) {
   if (!inherits(object, "vcmm_fit")) {
     stop("`object` must be a 'vcmm_fit'.", call. = FALSE)
   }
@@ -339,19 +349,32 @@ varying_coef <- function(object, t_new, k = NULL, ...) {
     t_new
   }
 
-  # Re-evaluate the same B-spline basis using the stored knots
-  B <- splines::bs(
-    t_use,
-    degree         = as.integer(ds$degree),
-    knots          = ds$internal_knots,
-    Boundary.knots = ds$boundary_knots,
-    intercept      = FALSE
+  # Re-evaluate the same B-spline basis using the stored knots.
+  # Silence the harmless "x values beyond boundary knots" warning
+  # that fires when the user passes a t_new spanning slightly past the
+  # stored training boundary (very common with seq(0, 1, ...) when
+  # min(t_train) is 0.001-ish). The basis evaluates correctly via
+  # polynomial extrapolation; the warning is purely informational.
+  B <- withCallingHandlers(
+    splines::bs(
+      t_use,
+      degree         = as.integer(ds$degree),
+      knots          = ds$internal_knots,
+      Boundary.knots = ds$boundary_knots,
+      intercept      = FALSE
+    ),
+    warning = function(w) {
+      if (grepl("beyond boundary knots", conditionMessage(w))) {
+        invokeRestart("muffleWarning")
+      }
+    }
   )
   B <- unclass(B); attributes(B) <- list(dim = dim(B))
 
   m    <- as.integer(ds$n_basis)
   beta <- as.numeric(object$beta)
 
+  # Point estimates
   out <- matrix(0, nrow = length(t_new), ncol = length(k))
   for (i in seq_along(k)) {
     ki         <- k[i]
@@ -359,7 +382,21 @@ varying_coef <- function(object, t_new, k = NULL, ...) {
     out[, i]   <- as.vector(B %*% coef_block)
   }
   colnames(out) <- sprintf("beta_%d(t)", k)
-  out
+
+  if (!isTRUE(se.fit)) return(out)
+
+  # Standard errors: SE(B(t)' beta_k) = sqrt(B(t)' V_k B(t)) per row
+  V_beta <- vcov.vcmm_fit(object, which = "beta")
+  se_mat <- matrix(0, nrow = length(t_new), ncol = length(k))
+  for (i in seq_along(k)) {
+    ki  <- k[i]
+    idx <- (1L + (ki - 1L) * m + 1L):(1L + ki * m)
+    V_k <- V_beta[idx, idx, drop = FALSE]
+    se_mat[, i] <- sqrt(pmax(rowSums((B %*% V_k) * B), 0))
+  }
+  colnames(se_mat) <- sprintf("se_beta_%d(t)", k)
+
+  list(fit = out, se.fit = se_mat)
 }
 
 # ----------------------------------------------------------------------------

@@ -293,12 +293,19 @@ predict.vcmm_fit <- function(object, newdata,
     t_new
   }
 
-  B_new <- splines::bs(
-    t_use,
-    degree         = as.integer(ds$degree),
-    knots          = ds$internal_knots,
-    Boundary.knots = ds$boundary_knots,
-    intercept      = FALSE
+  B_new <- withCallingHandlers(
+    splines::bs(
+      t_use,
+      degree         = as.integer(ds$degree),
+      knots          = ds$internal_knots,
+      Boundary.knots = ds$boundary_knots,
+      intercept      = FALSE
+    ),
+    warning = function(w) {
+      if (grepl("beyond boundary knots", conditionMessage(w))) {
+        invokeRestart("muffleWarning")
+      }
+    }
   )
   B_new <- unclass(B_new); attributes(B_new) <- list(dim = dim(B_new))
 
