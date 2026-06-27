@@ -17,10 +17,12 @@ Description: Scalable inference for Varying Coefficient Mixed-Effects
 License: GPL (>= 3)
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
+URL: https://github.com/lidajalili/cevcmm
+BugReports: https://github.com/lidajalili/cevcmm/issues
 Depends:
     R (>= 4.0.0)
-Imports:                          
-    splines                        
+Imports:
+    splines
 Suggests:
     testthat (>= 3.0.0),
     knitr,
