@@ -25,10 +25,10 @@ Commit this file at the end of every working day.
 |----:|:------:|-------------|-----------|
 | 8   | ✅     | `R/covariance.R` — Kronecker Σ₂ₓ₂ ⊗ Σ_spatial | OD simulation runs through package |
 | 9   | ✅     | Group-shared dense Σ_q ⊗ Ω_G via `re_cov="separable"` | Dense simulation runs through package |
-| 10  | 🚧    | `R/distributed.R` — `node_summary()` + `fit_from_summaries()` | 3-node mock fit = single-node fit |
-| 11  | ⬜     | S3: `print`, `summary`, `coef`, `fixef`, `ranef` | All five give sensible output |
-| 12  | ⬜     | S3: `predict.vcmm` (with newdata), `vcov.vcmm`, `logLik.vcmm` | Predictions match held-out MSPE |
-| 13  | ⬜     | `plot.vcmm` — varying-coef CI bands, residuals, RE QQ | Three plot types render |
+| 10  | ✅     | `R/distributed.R` — `node_summary()` + `fit_from_summaries()` | 3-node mock fit = single-node fit |
+| 11  | ✅     | S3: `print`, `summary`, `coef`, `fixef`, `ranef` | All five give sensible output |
+| 12  | ✅     | S3: `predict.vcmm` (with newdata), `vcov.vcmm`, `logLik.vcmm` | Predictions match held-out MSPE |
+| 13  | 🚧     | `plot.vcmm` — varying-coef CI bands, residuals, RE QQ | Three plot types render |
 | 14  | ⬜     | Integration day — full end-to-end on OD and dense | Both match current code numerically |
 
 ## Week 3 — Rcpp + tests
