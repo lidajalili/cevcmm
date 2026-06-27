@@ -18,4 +18,5 @@
 #' Applications.
 #'
 #' @keywords internal
+#' @importFrom stats coef cov nobs pnorm printCoefmat vcov
 "_PACKAGE"

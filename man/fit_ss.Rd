@@ -3,14 +3,11 @@
 \name{fit_ss}
 \alias{fit_ss}
 \alias{print.vcmm_fit}
-\alias{coef.vcmm_fit}
 \title{Fit a VCMM via the sufficient-statistics estimator}
 \usage{
 fit_ss(stats, penalty, control = vcmm_control(), re_cov_state = NULL)
 
 \method{print}{vcmm_fit}(x, ...)
-
-\method{coef}{vcmm_fit}(object, ...)
 }
 \arguments{
 \item{stats}{A \code{vcmm_ss} or \code{vcmm_accumulator} object
@@ -33,8 +30,6 @@ matching the diagonal case. Advanced users typically reach
 \item{x}{A \code{vcmm_fit} object.}
 
 \item{...}{Unused; present for S3 method consistency.}
-
-\item{object}{A \code{vcmm_fit} object.}
 }
 \value{
 A list of class \code{"vcmm_fit"} with elements:

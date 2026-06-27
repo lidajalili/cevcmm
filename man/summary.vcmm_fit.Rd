@@ -24,7 +24,7 @@
 \item{digits}{Integer. Number of significant digits to display.}
 
 \item{signif.stars}{Logical. If \code{TRUE}, append significance
-stars to the coefficient table (\code{R}'s default convention).}
+stars to the coefficient table.}
 }
 \value{
 A list of class \code{"vcmm_summary"}.
@@ -38,7 +38,13 @@ diagnostics. \code{print()} renders it in the style of \code{lm} /
 \details{
 The standard errors are the square roots of the diagonal of
 \code{vcov(object, which = "beta")}, treating \eqn{\sigma_\varepsilon}
-and \eqn{\sigma_\alpha} as fixed at their fitted values. They are
-first-order valid (Theorem 3.1) but do not adjust for variance
-component uncertainty.
+and \eqn{\sigma_\alpha} (or \eqn{\Sigma_\alpha}) as fixed at their
+fitted values. They are first-order valid (Theorem 3.1) but do not
+adjust for variance-component uncertainty.
+
+For \code{re_cov \%in\% c("kronecker", "separable")}, the variance-
+components block of the printed summary displays the estimated
+\eqn{\Sigma_{\mathrm{left}}} (\eqn{\Sigma_{2\times 2}} for OD or
+\eqn{\Sigma_q} for group-shared dense) instead of a scalar
+\eqn{\sigma_\alpha}.
 }

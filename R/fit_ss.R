@@ -311,10 +311,3 @@ print.vcmm_fit <- function(x, ...) {
 
   invisible(x)
 }
-
-#' @rdname fit_ss
-#' @param object A \code{vcmm_fit} object.
-#' @export
-coef.vcmm_fit <- function(object, ...) {
-  object$beta
-}
