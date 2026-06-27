@@ -271,6 +271,19 @@ fit_csl <- function(stats,
     re_cov_state, alpha_csl, sigma_eps, K_inv, p, q, control
   )
 
+  ## Marginal log-likelihood at the final (β_csl, α_csl, σ_ε, Σ_α). Rebuild
+  ## V_aa from the FINAL prior precision so log|Σ_y| reflects the post-EM
+  ## Sigma_left; this is the value summary() / logLik() / AIC() will report.
+  prior_precision_final <- .build_prior_precision(re_cov_state, sigma_eps,
+                                                  sigma_alpha, q)
+  V_aa_final <- stats$ZtZ + prior_precision_final
+  marginal_loglik <- .compute_marginal_loglik(
+    stats = stats, beta = beta_csl, alpha = alpha_csl,
+    sigma_eps = sigma_eps, sigma_alpha = sigma_alpha,
+    re_cov_state = re_cov_state,
+    V_aa = V_aa_final, n_obs = n_obs, q = q
+  )
+
   step_elapsed  <- as.numeric((proc.time() - start_step)["elapsed"])
   total_elapsed <- as.numeric((proc.time() - start_total)["elapsed"])
 
@@ -297,6 +310,7 @@ fit_csl <- function(stats,
     control           = control,
     K_inv             = K_inv,
     re_cov_state      = re_cov_state,
+    marginal_loglik   = marginal_loglik,
     call              = match.call()
   )
   class(out) <- c("vcmm_fit", "list")

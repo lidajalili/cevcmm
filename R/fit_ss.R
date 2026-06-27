@@ -208,27 +208,36 @@ fit_ss <- function(stats, penalty, control = vcmm_control(),
     re_cov_state, alpha, sigma_eps, K_inv, p, q, control
   )
 
+  ## Marginal log-likelihood at convergence (used by logLik.vcmm_fit, AIC, BIC).
+  marginal_loglik <- .compute_marginal_loglik(
+    stats = stats, beta = beta, alpha = alpha,
+    sigma_eps = sigma_eps, sigma_alpha = sigma_alpha,
+    re_cov_state = re_cov_state,
+    V_aa = V_aa_final, n_obs = n_obs, q = q
+  )
+
   if (control$verbose) {
     cat(sprintf("  [SS] converged=%s | iter=%d | elapsed=%.4fs\n",
                 converged, iter, elapsed))
   }
 
   out <- list(
-    beta         = beta,
-    alpha        = alpha,
-    sigma_eps    = sigma_eps,
-    sigma_alpha  = sigma_alpha,
-    iterations   = iter,
-    converged    = converged,
-    elapsed_sec  = elapsed,
-    n_obs        = n_obs,
-    p            = p,
-    q            = q,
-    method       = "SS",
-    control      = control,
-    K_inv        = K_inv,
-    re_cov_state = re_cov_state,
-    call         = match.call()
+    beta            = beta,
+    alpha           = alpha,
+    sigma_eps       = sigma_eps,
+    sigma_alpha     = sigma_alpha,
+    iterations      = iter,
+    converged       = converged,
+    elapsed_sec     = elapsed,
+    n_obs           = n_obs,
+    p               = p,
+    q               = q,
+    method          = "SS",
+    control         = control,
+    K_inv           = K_inv,
+    re_cov_state    = re_cov_state,
+    marginal_loglik = marginal_loglik,
+    call            = match.call()
   )
   class(out) <- c("vcmm_fit", "list")
   out
