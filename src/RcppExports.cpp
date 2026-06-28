@@ -21,9 +21,23 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// compute_sufficient_stats_cpp
+Rcpp::List compute_sufficient_stats_cpp(const arma::vec& y, const arma::mat& X, const arma::mat& Z);
+RcppExport SEXP _cevcmm_compute_sufficient_stats_cpp(SEXP ySEXP, SEXP XSEXP, SEXP ZSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::vec& >::type y(ySEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type X(XSEXP);
+    Rcpp::traits::input_parameter< const arma::mat& >::type Z(ZSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_sufficient_stats_cpp(y, X, Z));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cevcmm_cevcmm_rcpp_check", (DL_FUNC) &_cevcmm_cevcmm_rcpp_check, 0},
+    {"_cevcmm_compute_sufficient_stats_cpp", (DL_FUNC) &_cevcmm_compute_sufficient_stats_cpp, 3},
     {NULL, NULL, 0}
 };
 

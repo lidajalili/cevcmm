@@ -53,10 +53,20 @@
 #'   \item \code{XtZ}: \code{crossprod(X, Z)}, dimension p by q.
 #' }
 #'
+#' Since Day 16 the default backend is a RcppArmadillo implementation
+#' (\code{use_cpp = TRUE}). Pass \code{use_cpp = FALSE} to fall back to
+#' the pure-R reference path; this is used by the Day-16 bit-equivalence
+#' validation and is also useful for debugging.
+#'
 #' @param y Numeric response vector of length n.
 #' @param X Numeric n by p fixed-effects design matrix (intercept plus
 #'   spline basis columns).
 #' @param Z Numeric n by q random-effects design matrix.
+#' @param use_cpp Logical. If \code{TRUE} (default), dispatch to the
+#'   RcppArmadillo backend \code{compute_sufficient_stats_cpp()}.
+#'   If \code{FALSE}, use the pure-R \code{crossprod()} reference path.
+#'   The two paths agree to within floating-point summation order
+#'   (typically below 1e-13 relative).
 #'
 #' @return A list of class \code{"vcmm_ss"} with elements \code{a}, \code{b},
 #'   \code{C}, \code{ZtZ}, \code{Zty}, \code{XtZ}, and \code{n_obs} (the
@@ -78,18 +88,31 @@
 #'
 #' ss <- compute_sufficient_stats(y, X, Z)
 #' str(ss)
-compute_sufficient_stats <- function(y, X, Z) {
+compute_sufficient_stats <- function(y, X, Z, use_cpp = TRUE) {
   .check_yxz(y, X, Z)
 
-  out <- list(
-    a     = sum(y^2),
-    b     = crossprod(X, y),
-    C     = crossprod(X),
-    ZtZ   = crossprod(Z),
-    Zty   = crossprod(Z, y),
-    XtZ   = crossprod(X, Z),
-    n_obs = length(y)
-  )
+  if (isTRUE(use_cpp)) {
+    # RcppArmadillo backend. as.numeric() flattens y if it arrived as a
+    # 1-column matrix; as.matrix() guarantees X and Z aren't data.frames.
+    out <- compute_sufficient_stats_cpp(
+      as.numeric(y),
+      as.matrix(X),
+      as.matrix(Z)
+    )
+  } else {
+    # Pure-R reference path. Kept for the Day-16 bit-equivalence check
+    # and as a fallback if the compiled .so is unavailable (e.g. when
+    # users source individual R files directly without re-installing).
+    out <- list(
+      a     = sum(y^2),
+      b     = crossprod(X, y),
+      C     = crossprod(X),
+      ZtZ   = crossprod(Z),
+      Zty   = crossprod(Z, y),
+      XtZ   = crossprod(X, Z),
+      n_obs = length(y)
+    )
+  }
   class(out) <- c("vcmm_ss", "list")
   out
 }

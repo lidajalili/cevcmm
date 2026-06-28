@@ -17,3 +17,21 @@ cevcmm_rcpp_check <- function() {
     .Call(`_cevcmm_cevcmm_rcpp_check`)
 }
 
+#' Sufficient-statistics core in C++
+#'
+#' Internal RcppArmadillo implementation of the six cross-products
+#' that make up a VCMM per-node summary. Called by
+#' \code{compute_sufficient_stats()} when \code{use_cpp = TRUE}
+#' (the default since Day 16).
+#'
+#' @param y Numeric vector, length n.
+#' @param X Numeric matrix, n by p.
+#' @param Z Numeric matrix, n by q.
+#' @return A plain \code{list} (no class) with elements
+#'   \code{a, b, C, ZtZ, Zty, XtZ, n_obs}.
+#' @keywords internal
+#' @noRd
+compute_sufficient_stats_cpp <- function(y, X, Z) {
+    .Call(`_cevcmm_compute_sufficient_stats_cpp`, y, X, Z)
+}
+

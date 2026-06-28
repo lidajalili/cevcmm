@@ -4,7 +4,7 @@
 \alias{compute_sufficient_stats}
 \title{Compute one batch or node sufficient statistics for a normal linear VCMM}
 \usage{
-compute_sufficient_stats(y, X, Z)
+compute_sufficient_stats(y, X, Z, use_cpp = TRUE)
 }
 \arguments{
 \item{y}{Numeric response vector of length n.}
@@ -13,6 +13,12 @@ compute_sufficient_stats(y, X, Z)
 spline basis columns).}
 
 \item{Z}{Numeric n by q random-effects design matrix.}
+
+\item{use_cpp}{Logical. If \code{TRUE} (default), dispatch to the
+RcppArmadillo backend \code{compute_sufficient_stats_cpp()}.
+If \code{FALSE}, use the pure-R \code{crossprod()} reference path.
+The two paths agree to within floating-point summation order
+(typically below 1e-13 relative).}
 }
 \value{
 A list of class \code{"vcmm_ss"} with elements \code{a}, \code{b},
@@ -36,6 +42,11 @@ The returned components are:
 \item \code{Zty}: \code{crossprod(Z, y)}, dimension q by 1.
 \item \code{XtZ}: \code{crossprod(X, Z)}, dimension p by q.
 }
+
+Since Day 16 the default backend is a RcppArmadillo implementation
+(\code{use_cpp = TRUE}). Pass \code{use_cpp = FALSE} to fall back to
+the pure-R reference path; this is used by the Day-16 bit-equivalence
+validation and is also useful for debugging.
 }
 \examples{
 set.seed(1)
