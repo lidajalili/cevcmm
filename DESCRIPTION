@@ -22,7 +22,11 @@ BugReports: https://github.com/lidajalili/cevcmm/issues
 Depends:
     R (>= 4.0.0)
 Imports:
-    splines
+    splines,
+    Rcpp (>= 1.0.0)
+LinkingTo:
+    Rcpp,
+    RcppArmadillo
 Suggests:
     testthat (>= 3.0.0),
     knitr,

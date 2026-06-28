@@ -26,6 +26,14 @@ Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
 Applications.
 }
+\seealso{
+Useful links:
+\itemize{
+  \item \url{https://github.com/lidajalili/cevcmm}
+  \item Report bugs at \url{https://github.com/lidajalili/cevcmm/issues}
+}
+
+}
 \author{
 \strong{Maintainer}: Lida Jalili \email{lchalangarjalilideh1@gsu.edu}
 

@@ -19,4 +19,6 @@
 #'
 #' @keywords internal
 #' @importFrom stats coef cov nobs pnorm printCoefmat vcov
+#' @importFrom Rcpp sourceCpp
+#' @useDynLib cevcmm, .registration = TRUE
 "_PACKAGE"
