@@ -56,24 +56,24 @@ for (cfg in eq_configs) {
   y <- rnorm(cfg$N)
   X <- cbind(1, matrix(rnorm(cfg$N * (cfg$p - 1L)), cfg$N, cfg$p - 1L))
   Z <- matrix(rnorm(cfg$N * cfg$q), cfg$N, cfg$q)
-  
+
   ss_R   <- compute_sufficient_stats(y, X, Z, use_cpp = FALSE)
   ss_cpp <- compute_sufficient_stats(y, X, Z, use_cpp = TRUE)
-  
+
   # Class consistency
   .expect_true(inherits(ss_cpp, "vcmm_ss") && inherits(ss_R, "vcmm_ss"),
                sprintf("%s: both have class 'vcmm_ss'", cfg$tag))
-  
+
   # Shape consistency (b and Zty must be matrices, NOT vectors)
   shape_ok <- is.matrix(ss_cpp$b) && all(dim(ss_cpp$b) == c(cfg$p, 1L)) &&
-    is.matrix(ss_cpp$Zty) && all(dim(ss_cpp$Zty) == c(cfg$q, 1L)) &&
-    is.matrix(ss_cpp$C)   && all(dim(ss_cpp$C)   == c(cfg$p, cfg$p)) &&
-    is.matrix(ss_cpp$ZtZ) && all(dim(ss_cpp$ZtZ) == c(cfg$q, cfg$q)) &&
-    is.matrix(ss_cpp$XtZ) && all(dim(ss_cpp$XtZ) == c(cfg$p, cfg$q))
+              is.matrix(ss_cpp$Zty) && all(dim(ss_cpp$Zty) == c(cfg$q, 1L)) &&
+              is.matrix(ss_cpp$C)   && all(dim(ss_cpp$C)   == c(cfg$p, cfg$p)) &&
+              is.matrix(ss_cpp$ZtZ) && all(dim(ss_cpp$ZtZ) == c(cfg$q, cfg$q)) &&
+              is.matrix(ss_cpp$XtZ) && all(dim(ss_cpp$XtZ) == c(cfg$p, cfg$q))
   .expect_true(shape_ok,
                sprintf("%s: C++ output shapes match R (b and Zty are matrices)",
                        cfg$tag))
-  
+
   diffs <- c(
     a   = abs(ss_R$a   - ss_cpp$a),
     b   = max(abs(ss_R$b   - ss_cpp$b)),
@@ -83,7 +83,7 @@ for (cfg in eq_configs) {
     XtZ = max(abs(ss_R$XtZ - ss_cpp$XtZ))
   )
   max_diff <- max(diffs)
-  
+
   # Tolerance scales with N. Each entry of X'X is a sum of N products of
   # roughly unit-magnitude terms, so floating-point summation error grows
   # linearly with N (worst case ~ N * eps_machine, eps_machine = 2.22e-16).
@@ -91,7 +91,7 @@ for (cfg in eq_configs) {
   # case still requires meaningful agreement. At N = 50k this gives
   # 5e-9, which generously covers the observed ~1.6e-10.
   tol_abs <- max(1e-10, 1e-13 * cfg$N)
-  
+
   .expect_true(
     max_diff < tol_abs,
     sprintf("%s (N=%d, p=%d, q=%d): max |R - C++| = %.3e   (tol = %.3e)",
@@ -100,17 +100,27 @@ for (cfg in eq_configs) {
 }
 
 # ============================================================================
-# (3) Speed benchmark
+# (3) Speed benchmark (microbenchmark, microsecond resolution)
 # ============================================================================
-cat("\n========== (3) Speed benchmark (median of 5 runs) ==========\n\n")
-cat(sprintf("%6s %4s %5s %14s %14s %10s\n",
-            "N", "p", "q", "R (s)", "C++ (s)", "speedup"))
-cat(strrep("-", 65), "\n", sep = "")
+cat("\n========== (3) Speed benchmark (microbenchmark) ==========\n\n")
 
+if (!requireNamespace("microbenchmark", quietly = TRUE)) {
+  stop("This benchmark needs the microbenchmark package.\n",
+       "  install.packages('microbenchmark')",
+       call. = FALSE)
+}
+
+cat(sprintf("%6s %4s %5s %14s %14s %12s\n",
+            "N", "p", "q", "R (us)", "C++ (us)", "speedup"))
+cat(strrep("-", 70), "\n", sep = "")
+
+# Number of microbenchmark replicates: more for small N (cheap to repeat),
+# fewer for large N (each call takes longer; 30 reps is plenty for a
+# stable median).
 bench_configs <- list(
-  list(N = 1000L,  p = 10L, q = 40L),
-  list(N = 10000L, p = 20L, q = 100L),
-  list(N = 50000L, p = 30L, q = 200L)
+  list(N = 1000L,  p = 10L, q = 40L,  reps = 200L),
+  list(N = 10000L, p = 20L, q = 100L, reps = 100L),
+  list(N = 50000L, p = 30L, q = 200L, reps = 30L)
 )
 
 results <- list()
@@ -119,31 +129,23 @@ for (cfg in bench_configs) {
   y <- rnorm(cfg$N)
   X <- cbind(1, matrix(rnorm(cfg$N * (cfg$p - 1L)), cfg$N, cfg$p - 1L))
   Z <- matrix(rnorm(cfg$N * cfg$q), cfg$N, cfg$q)
-  
-  # Warm up both paths (first-call has dispatch/JIT overhead)
-  invisible(compute_sufficient_stats(y, X, Z, use_cpp = FALSE))
-  invisible(compute_sufficient_stats(y, X, Z, use_cpp = TRUE))
-  
-  n_runs <- 5L
-  t_R   <- replicate(n_runs,
-                     system.time(
-                       compute_sufficient_stats(y, X, Z, use_cpp = FALSE)
-                     )[["elapsed"]])
-  t_cpp <- replicate(n_runs,
-                     system.time(
-                       compute_sufficient_stats(y, X, Z, use_cpp = TRUE)
-                     )[["elapsed"]])
-  
-  med_R   <- median(t_R)
-  med_cpp <- median(t_cpp)
+
+  mb <- microbenchmark::microbenchmark(
+    R   = compute_sufficient_stats(y, X, Z, use_cpp = FALSE),
+    cpp = compute_sufficient_stats(y, X, Z, use_cpp = TRUE),
+    times = cfg$reps
+  )
+
+  med_R   <- median(mb$time[mb$expr == "R"])   / 1000  # ns -> us
+  med_cpp <- median(mb$time[mb$expr == "cpp"]) / 1000
   speedup <- if (med_cpp > 0) med_R / med_cpp else NA_real_
-  
-  cat(sprintf("%6d %4d %5d %14.5f %14.5f %9.2fx\n",
+
+  cat(sprintf("%6d %4d %5d %14.2f %14.2f %11.2fx\n",
               cfg$N, cfg$p, cfg$q, med_R, med_cpp, speedup))
-  
+
   results[[length(results) + 1L]] <- list(
     N = cfg$N, p = cfg$p, q = cfg$q,
-    t_R = med_R, t_cpp = med_cpp, speedup = speedup
+    med_R_us = med_R, med_cpp_us = med_cpp, speedup = speedup
   )
 }
 
@@ -168,8 +170,8 @@ alpha_true <- as.vector(crossprod(chol(kronecker(Sigma_2x2, Sigma_spatial)),
 
 t   <- runif(N); x   <- runif(N)
 y   <- 2 + sin(2 * pi * t) * x +
-  as.vector(Z %*% alpha_true) +
-  rnorm(N, sd = 0.5)
+       as.vector(Z %*% alpha_true) +
+       rnorm(N, sd = 0.5)
 
 fit <- vcmm(y, X = x, Z = Z, t = t, method = "csl",
             re_cov             = "kronecker",
