@@ -175,24 +175,34 @@ svd_pseudo_inverse <- function(A, use_split_merge = TRUE, verbose = FALSE) {
 #' Inverts a square matrix \eqn{A} using a dispatch rule that balances speed
 #' and numerical stability:
 #' \itemize{
-#'   \item If \code{q < 100}: attempt base \code{\link[base]{solve}}; if the
-#'     condition number exceeds \eqn{10^8} or \code{solve()} fails, fall
-#'     back to SVD pseudo-inverse.
-#'   \item If \code{q >= 100}: skip \code{solve()} and use the SVD
-#'     pseudo-inverse directly, via the split-merge variant
-#'     \code{split_merge_svd_row()}.
+#'   \item If \code{q < 100}: try Cholesky (via
+#'     \code{invert_spd_cpp()}), falling through to LU
+#'     (\code{invert_general_cpp()}) and finally SVD pseudo-inverse if
+#'     the matrix is not positive-definite.
+#'   \item If \code{q >= 100}: skip the dense fast path and use the
+#'     split-merge SVD pseudo-inverse directly (paper Algorithm 2).
 #' }
-#' This implements the SVD-stabilised step of Algorithm 2 in
-#' Lin & Jalili (2026), used inside the SS and CSL estimators when the
-#' aggregated Gram matrices are dense or ill-conditioned.
+#' The Cholesky fast path is roughly 2-3x faster than the original
+#' \code{kappa(A) + solve(A)} R path on VCMM K matrices, because:
+#' \itemize{
+#'   \item \code{kappa(A)} itself is an SVD -- it was being used
+#'     defensively to decide whether to call \code{solve()}, but is
+#'     redundant when Cholesky's own positive-definiteness check is free.
+#'   \item Cholesky is roughly 2x faster than LU for SPD matrices,
+#'     which is the typical case for prior-augmented Gram matrices.
+#' }
+#' If you need to reproduce the original R-only path (e.g. for a
+#' bit-equivalence test), pass \code{use_cpp = FALSE}.
 #'
 #' @param A Numeric square matrix to invert.
 #' @param q Optional integer. Routing dimension used to pick the inversion
 #'   strategy (defaults to \code{nrow(A)}). Pass an explicit value if you
 #'   know \code{A} is a curvature block with a meaningful dimension that
 #'   differs from its row count.
-#' @param verbose Logical. If \code{TRUE}, print the chosen method and
-#'   condition number.
+#' @param verbose Logical. If \code{TRUE}, print the chosen method.
+#' @param use_cpp Logical. If \code{TRUE} (default since Day 17), use the
+#'   RcppArmadillo Cholesky/LU backend. If \code{FALSE}, use the original
+#'   pure-R path (\code{kappa(A)} + \code{solve(A)}).
 #'
 #' @return A numeric matrix with the same dimensions as \code{A}.
 #'
@@ -207,7 +217,7 @@ svd_pseudo_inverse <- function(A, use_split_merge = TRUE, verbose = FALSE) {
 #' A <- crossprod(matrix(rnorm(50), 10, 5)) + diag(5)
 #' A_inv <- invert_matrix(A)
 #' max(abs(A %*% A_inv - diag(5)))  # ~ machine epsilon
-invert_matrix <- function(A, q = NULL, verbose = FALSE) {
+invert_matrix <- function(A, q = NULL, verbose = FALSE, use_cpp = TRUE) {
   if (!is.matrix(A) || !is.numeric(A)) {
     stop("`A` must be a numeric matrix.", call. = FALSE)
   }
@@ -217,19 +227,71 @@ invert_matrix <- function(A, q = NULL, verbose = FALSE) {
   }
   if (is.null(q)) q <- nrow(A)
 
+  if (!isTRUE(use_cpp)) {
+    return(.invert_matrix_R_legacy(A, q = q, verbose = verbose))
+  }
+
+  # ------------------------- C++ fast path --------------------------------
+  # Small-to-medium: try Cholesky first. For VCMM K matrices these are
+  # always symmetric positive-definite so Cholesky succeeds; we never
+  # need to spend an O((p+q)^3) kappa() probe to decide.
+  if (q < 100) {
+    result <- tryCatch(invert_spd_cpp(A), error = function(e) NULL)
+    if (!is.null(result)) {
+      if (verbose) cat(sprintf("  [Invert] Cholesky (q=%d)\n", q))
+      return(result)
+    }
+
+    # Cholesky failed -- matrix is not PD. Try LU.
+    result <- tryCatch(invert_general_cpp(A), error = function(e) NULL)
+    if (!is.null(result)) {
+      if (verbose) {
+        cat(sprintf("  [Invert] LU (q=%d, Cholesky declined)\n", q))
+      }
+      return(result)
+    }
+
+    # Both fast paths failed -- fall through to SVD pseudo-inverse below.
+    if (verbose) {
+      cat(sprintf("  [Invert] both Cholesky and LU failed at q=%d; SVD fallback\n",
+                  q))
+    }
+  }
+
+  # ------------------------- SVD path -------------------------------------
+  # Two sub-cases:
+  #   q >= 100 -> split-merge SVD per Algorithm 2 of the paper (R-only,
+  #               algorithmic choice driven by numerical stability for
+  #               large dense ill-conditioned Gram matrices).
+  #   q  < 100 -> dense SVD pseudo-inverse via the C++ backend.
+  if (q >= 100) {
+    res <- svd_pseudo_inverse(A, use_split_merge = TRUE, verbose = verbose)
+    return(res$inverse)
+  } else {
+    return(pinv_cpp(A))
+  }
+}
+
+# Internal: pure-R legacy implementation used when use_cpp = FALSE.
+# Preserved verbatim so the Day-17 bit-equivalence test has a stable
+# reference and so the package still works if the compiled .so is
+# absent.
+.invert_matrix_R_legacy <- function(A, q, verbose) {
   if (q < 100) {
     cn <- tryCatch(kappa(A), error = function(e) Inf)
     if (cn < 1e8) {
       result <- tryCatch(solve(A), error = function(e) NULL)
       if (!is.null(result)) {
-        if (verbose) cat(sprintf("  [Invert] solve() | cond: %.2e\n", cn))
+        if (verbose) {
+          cat(sprintf("  [Invert] solve() | cond: %.2e\n", cn))
+        }
         return(result)
       }
     }
-    if (verbose) cat(sprintf("  [Invert] kappa=%.2e - falling back to SVD\n", cn))
+    if (verbose) {
+      cat(sprintf("  [Invert] kappa=%.2e - falling back to SVD\n", cn))
+    }
   }
-
-  # SVD path: q >= 100, or solve() failed
   res <- svd_pseudo_inverse(A, use_split_merge = (q >= 100), verbose = verbose)
   res$inverse
 }

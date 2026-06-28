@@ -34,10 +34,47 @@ BEGIN_RCPP
     return rcpp_result_gen;
 END_RCPP
 }
+// invert_spd_cpp
+arma::mat invert_spd_cpp(const arma::mat& A);
+RcppExport SEXP _cevcmm_invert_spd_cpp(SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    rcpp_result_gen = Rcpp::wrap(invert_spd_cpp(A));
+    return rcpp_result_gen;
+END_RCPP
+}
+// invert_general_cpp
+arma::mat invert_general_cpp(const arma::mat& A);
+RcppExport SEXP _cevcmm_invert_general_cpp(SEXP ASEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    rcpp_result_gen = Rcpp::wrap(invert_general_cpp(A));
+    return rcpp_result_gen;
+END_RCPP
+}
+// pinv_cpp
+arma::mat pinv_cpp(const arma::mat& A, double tol);
+RcppExport SEXP _cevcmm_pinv_cpp(SEXP ASEXP, SEXP tolSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< const arma::mat& >::type A(ASEXP);
+    Rcpp::traits::input_parameter< double >::type tol(tolSEXP);
+    rcpp_result_gen = Rcpp::wrap(pinv_cpp(A, tol));
+    return rcpp_result_gen;
+END_RCPP
+}
 
 static const R_CallMethodDef CallEntries[] = {
     {"_cevcmm_cevcmm_rcpp_check", (DL_FUNC) &_cevcmm_cevcmm_rcpp_check, 0},
     {"_cevcmm_compute_sufficient_stats_cpp", (DL_FUNC) &_cevcmm_compute_sufficient_stats_cpp, 3},
+    {"_cevcmm_invert_spd_cpp", (DL_FUNC) &_cevcmm_invert_spd_cpp, 1},
+    {"_cevcmm_invert_general_cpp", (DL_FUNC) &_cevcmm_invert_general_cpp, 1},
+    {"_cevcmm_pinv_cpp", (DL_FUNC) &_cevcmm_pinv_cpp, 2},
     {NULL, NULL, 0}
 };
 

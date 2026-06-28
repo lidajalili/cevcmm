@@ -35,3 +35,50 @@ compute_sufficient_stats_cpp <- function(y, X, Z) {
     .Call(`_cevcmm_compute_sufficient_stats_cpp`, y, X, Z)
 }
 
+#' Cholesky-based inverse for symmetric positive-definite matrices
+#'
+#' Internal RcppArmadillo backend for the fast path of
+#' \code{\link{invert_matrix}}. Uses LAPACK \code{dpotrf} + \code{dpotri}.
+#'
+#' Throws an R error if \code{A} is not symmetric positive-definite; the
+#' R wrapper catches this and falls back to \code{invert_general_cpp}.
+#'
+#' @param A Symmetric positive-definite square matrix.
+#' @return Inverse of A.
+#' @keywords internal
+#' @noRd
+invert_spd_cpp <- function(A) {
+    .Call(`_cevcmm_invert_spd_cpp`, A)
+}
+
+#' General matrix inverse via LU factorisation
+#'
+#' Internal RcppArmadillo backend used as a fallback by
+#' \code{\link{invert_matrix}} when Cholesky fails. Uses LAPACK
+#' \code{dgetrf} + \code{dgetri}.
+#'
+#' @param A Square invertible matrix.
+#' @return Inverse of A.
+#' @keywords internal
+#' @noRd
+invert_general_cpp <- function(A) {
+    .Call(`_cevcmm_invert_general_cpp`, A)
+}
+
+#' SVD-based Moore-Penrose pseudo-inverse
+#'
+#' Internal RcppArmadillo backend used as the final fallback by
+#' \code{\link{invert_matrix}}. Uses LAPACK \code{dgesvd} via
+#' \code{arma::pinv}.
+#'
+#' @param A Numeric matrix.
+#' @param tol Tolerance below which singular values are treated as zero.
+#'   If \code{<= 0}, use Armadillo's default
+#'   (\code{max(dim(A)) * eps_machine * max(svd(A))}).
+#' @return Moore-Penrose pseudo-inverse of A.
+#' @keywords internal
+#' @noRd
+pinv_cpp <- function(A, tol = -1.0) {
+    .Call(`_cevcmm_pinv_cpp`, A, tol)
+}
+

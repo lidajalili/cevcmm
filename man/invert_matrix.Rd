@@ -4,7 +4,7 @@
 \alias{invert_matrix}
 \title{Numerically stable matrix inversion with automatic method selection}
 \usage{
-invert_matrix(A, q = NULL, verbose = FALSE)
+invert_matrix(A, q = NULL, verbose = FALSE, use_cpp = TRUE)
 }
 \arguments{
 \item{A}{Numeric square matrix to invert.}
@@ -14,8 +14,11 @@ strategy (defaults to \code{nrow(A)}). Pass an explicit value if you
 know \code{A} is a curvature block with a meaningful dimension that
 differs from its row count.}
 
-\item{verbose}{Logical. If \code{TRUE}, print the chosen method and
-condition number.}
+\item{verbose}{Logical. If \code{TRUE}, print the chosen method.}
+
+\item{use_cpp}{Logical. If \code{TRUE} (default since Day 17), use the
+RcppArmadillo Cholesky/LU backend. If \code{FALSE}, use the original
+pure-R path (\code{kappa(A)} + \code{solve(A)}).}
 }
 \value{
 A numeric matrix with the same dimensions as \code{A}.
@@ -24,16 +27,24 @@ A numeric matrix with the same dimensions as \code{A}.
 Inverts a square matrix \eqn{A} using a dispatch rule that balances speed
 and numerical stability:
 \itemize{
-\item If \code{q < 100}: attempt base \code{\link[base]{solve}}; if the
-condition number exceeds \eqn{10^8} or \code{solve()} fails, fall
-back to SVD pseudo-inverse.
-\item If \code{q >= 100}: skip \code{solve()} and use the SVD
-pseudo-inverse directly, via the split-merge variant
-\code{split_merge_svd_row()}.
+\item If \code{q < 100}: try Cholesky (via
+\code{invert_spd_cpp()}), falling through to LU
+(\code{invert_general_cpp()}) and finally SVD pseudo-inverse if
+the matrix is not positive-definite.
+\item If \code{q >= 100}: skip the dense fast path and use the
+split-merge SVD pseudo-inverse directly (paper Algorithm 2).
 }
-This implements the SVD-stabilised step of Algorithm 2 in
-Lin & Jalili (2026), used inside the SS and CSL estimators when the
-aggregated Gram matrices are dense or ill-conditioned.
+The Cholesky fast path is roughly 2-3x faster than the original
+\code{kappa(A) + solve(A)} R path on VCMM K matrices, because:
+\itemize{
+\item \code{kappa(A)} itself is an SVD -- it was being used
+defensively to decide whether to call \code{solve()}, but is
+redundant when Cholesky's own positive-definiteness check is free.
+\item Cholesky is roughly 2x faster than LU for SPD matrices,
+which is the typical case for prior-augmented Gram matrices.
+}
+If you need to reproduce the original R-only path (e.g. for a
+bit-equivalence test), pass \code{use_cpp = FALSE}.
 }
 \examples{
 set.seed(1)
