@@ -4,7 +4,13 @@
 \alias{invert_matrix}
 \title{Numerically stable matrix inversion with automatic method selection}
 \usage{
-invert_matrix(A, q = NULL, verbose = FALSE, use_cpp = TRUE)
+invert_matrix(
+  A,
+  q = NULL,
+  verbose = FALSE,
+  use_cpp = TRUE,
+  method = c("auto", "lapack", "rspectra")
+)
 }
 \arguments{
 \item{A}{Numeric square matrix to invert.}
@@ -18,7 +24,19 @@ differs from its row count.}
 
 \item{use_cpp}{Logical. If \code{TRUE} (default since Day 17), use the
 RcppArmadillo Cholesky/LU backend. If \code{FALSE}, use the original
-pure-R path (\code{kappa(A)} + \code{solve(A)}).}
+pure-R path with \code{kappa(A)} plus \code{solve(A)}.}
+
+\item{method}{Character string, one of \code{"auto"} (default),
+\code{"lapack"}, or \code{"rspectra"}. Only affects the
+\code{q >= 100} branch. With \code{"auto"}, the routing checks
+\code{getOption("cevcmm.use_rspectra", FALSE)}: if \code{TRUE} and
+the RSpectra package is installed, the truncated-SVD path is used;
+otherwise the dense LAPACK split-merge SVD is used. With
+\code{"lapack"}, always use the dense LAPACK path (the original
+Algorithm 2 behaviour). With \code{"rspectra"}, force the truncated
+SVD via RSpectra; if the matrix turns out to be full-rank, the
+function silently falls back to LAPACK so results are always
+correct.}
 }
 \value{
 A numeric matrix with the same dimensions as \code{A}.
@@ -31,18 +49,20 @@ and numerical stability:
 \code{invert_spd_cpp()}), falling through to LU
 (\code{invert_general_cpp()}) and finally SVD pseudo-inverse if
 the matrix is not positive-definite.
-\item If \code{q >= 100}: skip the dense fast path and use the
-split-merge SVD pseudo-inverse directly (paper Algorithm 2).
+\item If \code{q >= 100}: route through the SVD pseudo-inverse path.
+By default this is the dense LAPACK split-merge variant
+(\code{svd_pseudo_inverse()}, paper Algorithm 2). When the user
+opts in (see the \code{method} argument below), the iterative
+truncated SVD from \code{RSpectra::svds()} is used instead --
+faster when the matrix has effective rank much smaller than
+\code{q}, slower otherwise.
 }
 The Cholesky fast path is roughly 2-3x faster than the original
-\code{kappa(A) + solve(A)} R path on VCMM K matrices, because:
-\itemize{
-\item \code{kappa(A)} itself is an SVD -- it was being used
-defensively to decide whether to call \code{solve()}, but is
-redundant when Cholesky's own positive-definiteness check is free.
-\item Cholesky is roughly 2x faster than LU for SPD matrices,
-which is the typical case for prior-augmented Gram matrices.
+\code{kappa(A) + solve(A)} R path on VCMM K matrices. See the Day 17
+and Day 18 validation scripts in \code{inst/validation/} for the
+bit-equivalence and timing details.
 }
+\details{
 If you need to reproduce the original R-only path (e.g. for a
 bit-equivalence test), pass \code{use_cpp = FALSE}.
 }

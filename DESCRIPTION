@@ -28,6 +28,9 @@ LinkingTo:
     Rcpp,
     RcppArmadillo
 Suggests:
+    devtools,
+    microbenchmark,
+    RSpectra,
     testthat (>= 3.0.0),
     knitr,
     rmarkdown
