@@ -149,19 +149,45 @@ svd_pseudo_inverse <- function(A, use_split_merge = TRUE, verbose = FALSE) {
   }
   
   U <- sv_res$u; d <- sv_res$d; V <- sv_res$v
-  tol   <- .Machine$double.eps * d[1] * max(dim(A))
-  d_inv <- ifelse(d > tol, 1 / d, 0)
   
-  cond_num <- d[1] / max(d[length(d)], 1e-16)
+  # Standard svd() guarantees length(d) == ncol(U) == ncol(V), but
+  # split_merge_svd_row() builds U via a Krylov-style assembly that can
+  # leave the three pieces with different column/length counts. Align
+  # everything to the common minimum BEFORE the d_inv * t(U) scale, so
+  # we never trigger R's "longer object length is not a multiple of
+  # shorter object length" recycling warning.
+  r <- min(length(d), ncol(U), ncol(V))
+  d <- d[seq_len(r)]
+  U <- U[, seq_len(r), drop = FALSE]
+  V <- V[, seq_len(r), drop = FALSE]
+  
+  # Truncate at the LAPACK tolerance, then form the pseudo-inverse from
+  # the kept rank only. This is mathematically the same as scaling all
+  # singular values by ifelse(d > tol, 1/d, 0), but cleaner: the kept
+  # block is dense and well-conditioned.
+  tol  <- .Machine$double.eps * d[1] * max(dim(A))
+  keep <- d > tol
+  if (!any(keep)) {
+    # Degenerate: the matrix is numerically zero. Return a zero
+    # pseudo-inverse with the right shape so callers don't blow up.
+    inverse <- matrix(0, nrow = nrow(A), ncol = ncol(A))
+  } else {
+    d_inv_keep <- 1 / d[keep]
+    U_keep     <- U[, keep, drop = FALSE]
+    V_keep     <- V[, keep, drop = FALSE]
+    inverse    <- V_keep %*% (d_inv_keep * t(U_keep))
+  }
+  
+  cond_num <- d[1] / max(d[r], 1e-16)
   if (verbose) {
     cat(sprintf("  [SVD Inverse] method: %s | cond: %.2e | eff-rank: %d/%d\n",
-                method, cond_num, sum(d > tol), length(d)))
+                method, cond_num, sum(keep), r))
   }
   
   list(
-    inverse          = V %*% (d_inv * t(U)),
+    inverse          = inverse,
     condition_number = cond_num,
-    effective_rank   = sum(d > tol),
+    effective_rank   = sum(keep),
     method           = method
   )
 }

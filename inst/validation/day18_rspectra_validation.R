@@ -41,7 +41,11 @@ make_rank_deficient_spd <- function(q, r, seed = 18L, cond_kept = 1e6) {
   U <- qr.Q(qr(matrix(rnorm(q * q), q, q)))   # random orthogonal basis
   d <- numeric(q)
   d[seq_len(r)] <- exp(seq(0, -log(cond_kept), length.out = r))  # geom decay
-  d[(r + 1):q] <- d[r] * 1e-14   # bottom block: numerically zero
+  # When r == q the matrix is full-rank (fall-back test). The previous form
+  # (r + 1):q produced a descending sequence c(r+1, r) in that case, which
+  # silently extended d to length q+1 and broke the d * t(U) shape match.
+  # seq_len(q - r) returns integer(0) when r == q, so this is a clean no-op.
+  d[seq_len(q - r) + r] <- d[r] * 1e-14
   A <- U %*% (d * t(U))
   (A + t(A)) / 2                  # numerical symmetrization
 }
@@ -71,16 +75,16 @@ eq_configs <- list(
 
 for (cfg in eq_configs) {
   A <- make_rank_deficient_spd(cfg$q, cfg$r)
-
+  
   inv_lapack   <- invert_matrix(A, q = cfg$q, method = "lapack")
   inv_rspectra <- invert_matrix(A, q = cfg$q, method = "rspectra")
-
+  
   # Both should be valid pseudo-inverses of the same effective rank r.
   # Compare via the "Moore-Penrose identity" residual on the kept subspace:
   #   A * A^+ * A should equal A (to within numerical precision)
   resid_lapack   <- max(abs(A %*% inv_lapack   %*% A - A)) / max(abs(A))
   resid_rspectra <- max(abs(A %*% inv_rspectra %*% A - A)) / max(abs(A))
-
+  
   .expect_true(
     resid_lapack < 1e-8,
     sprintf("%s: LAPACK   relative ||A A^+ A - A|| = %.3e",
@@ -91,7 +95,7 @@ for (cfg in eq_configs) {
     sprintf("%s: RSpectra relative ||A A^+ A - A|| = %.3e",
             cfg$tag, resid_rspectra)
   )
-
+  
   # Direct comparison: both Moore-Penrose pseudo-inverses on the same rank
   # should be element-wise close (the small singular vectors live in the
   # truncated subspace and cancel out).
@@ -120,20 +124,20 @@ speed_configs <- list(
 speed_results <- list()
 for (cfg in speed_configs) {
   A <- make_rank_deficient_spd(cfg$q, cfg$r)
-
+  
   mb <- microbenchmark::microbenchmark(
     lapack   = invert_matrix(A, q = cfg$q, method = "lapack"),
     rspectra = invert_matrix(A, q = cfg$q, method = "rspectra"),
     times = cfg$reps
   )
-
+  
   med_lap <- median(mb$time[mb$expr == "lapack"])   / 1e6   # ns -> ms
   med_rsp <- median(mb$time[mb$expr == "rspectra"]) / 1e6
   speedup <- if (med_rsp > 0) med_lap / med_rsp else NA_real_
-
+  
   cat(sprintf("%5d %6d %14.2f %16.2f %11.2fx\n",
               cfg$q, cfg$r, med_lap, med_rsp, speedup))
-
+  
   speed_results[[length(speed_results) + 1L]] <- list(
     q = cfg$q, r = cfg$r,
     lapack_ms = med_lap, rspectra_ms = med_rsp, speedup = speedup
@@ -213,7 +217,7 @@ fit_lapack <- vcmm(y, X = x, Z = Z, t = t, method = "csl",
 # beta should match between the two paths (both produce the same
 # Moore-Penrose pseudo-inverse on the retained subspace)
 beta_diff <- max(abs(fit_rspectra$beta - fit_lapack$beta)) /
-             max(abs(fit_lapack$beta))
+  max(abs(fit_lapack$beta))
 .expect_true(
   beta_diff < 1e-6,
   sprintf("end-to-end beta: max relative diff RSpectra vs LAPACK = %.3e",
