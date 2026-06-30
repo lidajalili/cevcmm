@@ -1,0 +1,4 @@
+## Windows variant of Makevars. Same minimal content as the Unix
+## file: declare C++17 and let RcppArmadillo handle BLAS / LAPACK /
+## Fortran linking via LinkingTo: RcppArmadillo.
+CXX_STD = CXX17

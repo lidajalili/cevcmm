@@ -1,0 +1,12 @@
+## C++17 is required by RcppArmadillo (>= 11.x) and matches the rest
+## of the package. CRAN requires this to be declared explicitly when
+## CXX_STD is non-default.
+CXX_STD = CXX17
+
+## Note: we deliberately do NOT add $(LAPACK_LIBS) $(BLAS_LIBS)
+## $(FLIBS) to PKG_LIBS. RcppArmadillo's own configure step
+## (triggered automatically via LinkingTo: RcppArmadillo in
+## DESCRIPTION) handles BLAS / LAPACK / Fortran linking for us.
+## Adding the FLIBS expansion explicitly can fail on macOS systems
+## where R's compiled-in FLIBS variable references a gfortran install
+## path that no longer exists (e.g. after a macOS upgrade).
