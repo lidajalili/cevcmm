@@ -37,7 +37,11 @@ test_that("fixef returns list with intercept and varying parts", {
   fx <- fixef(out$fit)
   expect_true(is.list(fx))
   expect_named(fx, c("intercept", "varying"))
-  expect_equal(fx$intercept, coef(out$fit)[1], tolerance = 1e-12)
+  # The intercept value must equal coef[1], but the two carry different
+  # name attributes (fixef$intercept is unnamed; coef has "(Intercept)").
+  # Compare values only.
+  expect_equal(fx$intercept, coef(out$fit)[1],
+               tolerance = 1e-12, ignore_attr = TRUE)
 })
 
 test_that("ranef returns vector for diag, matrix for kron/sep", {
@@ -107,7 +111,6 @@ test_that("summary works for all re_cov modes", {
   for (f in list(fit_d, fit_k, fit_s)) {
     sm <- summary(f)
     expect_s3_class(sm, "vcmm_summary")
-    # print should not error
     expect_silent(invisible(capture.output(print(sm))))
   }
 })

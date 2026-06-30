@@ -1,4 +1,11 @@
 # Mirrors inst/validation/day12_predict_validation.R.
+# All predict() calls supply newdata explicitly because the package
+# convention is to require it (preventing accidental in-sample
+# prediction that's easy to confuse with cross-validation results).
+
+.predict_newdata <- function(d) {
+  list(t = d$t, X = d$x, Z = d$Z)
+}
 
 test_that("predict default (subject-specific) returns N-length vector", {
   d <- gen_diag_data(N = 300L, q = 3L)
@@ -8,7 +15,7 @@ test_that("predict default (subject-specific) returns N-length vector", {
                                      sigma_alpha = 0.4,
                                      update_variance = TRUE))
 
-  yhat <- predict(fit)
+  yhat <- predict(fit, newdata = .predict_newdata(d))
   expect_type(yhat, "double")
   expect_equal(length(yhat), d$N)
   expect_true(all(is.finite(yhat)))
@@ -22,11 +29,11 @@ test_that("include_random=FALSE drops the RE contribution", {
                                      sigma_alpha = 0.4,
                                      update_variance = TRUE))
 
-  yhat_subj <- predict(fit, include_random = TRUE)
-  yhat_marg <- predict(fit, include_random = FALSE)
-  # The two should differ if random effects are non-trivial
+  nd <- .predict_newdata(d)
+  yhat_subj <- predict(fit, newdata = nd, include_random = TRUE)
+  yhat_marg <- predict(fit, newdata = nd, include_random = FALSE)
+
   expect_false(isTRUE(all.equal(yhat_subj, yhat_marg)))
-  # Marginal MSE should be larger (less precise) than subject-specific
   mse_subj <- mean((d$y - yhat_subj)^2)
   mse_marg <- mean((d$y - yhat_marg)^2)
   expect_gt(mse_marg, mse_subj)
@@ -40,7 +47,7 @@ test_that("predict with se.fit returns non-negative SEs", {
                                      sigma_alpha = 0.4,
                                      update_variance = TRUE))
 
-  out <- predict(fit, se.fit = TRUE)
+  out <- predict(fit, newdata = .predict_newdata(d), se.fit = TRUE)
   expect_named(out, c("fit", "se.fit"))
   expect_equal(length(out$fit), d$N)
   expect_equal(length(out$se.fit), d$N)
@@ -61,7 +68,6 @@ test_that("logLik returns finite value with df and nobs attributes", {
   expect_true(!is.null(attr(ll, "df")))
   expect_equal(attr(ll, "nobs"), d$N)
 
-  # AIC and BIC should follow without error
   expect_true(is.finite(AIC(fit)))
   expect_true(is.finite(BIC(fit)))
 })
@@ -83,7 +89,5 @@ test_that("logLik df differs across re_cov modes", {
                                        sigma_alpha = sqrt(0.5),
                                        update_variance = TRUE))
 
-  # kron has more variance-component parameters (3 in Sigma_2x2) than
-  # diag (1 sigma_alpha), so df should be larger
   expect_gt(attr(logLik(fit_k), "df"), attr(logLik(fit_d), "df"))
 })
