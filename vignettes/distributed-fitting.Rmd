@@ -101,7 +101,9 @@ long as the inputs agree.)
 ```{r design}
 design <- build_vcmm_design(X = x, t = t)
 X_d    <- design$X_design
-dim(X_d)   # N x p, where p = 12 = intercept + 11 spline coefs
+# N rows x p columns; p = intercept + spline-basis coefficients,
+# with n_basis auto-picked from the sample size.
+dim(X_d)
 ```
 
 Each node produces a summary:
@@ -153,9 +155,9 @@ all.equal(fit_pooled$sigma_eps,   fit_dist$sigma_eps)
 all.equal(fit_pooled$sigma_alpha, fit_dist$sigma_alpha)
 ```
 
-The maximum coefficient difference is at the BLAS summation-noise level
-(typically $\sim 10^{-12}$). The distributed fit *is* the pooled fit; only
-the path that produced it differs.
+The maximum coefficient difference sits at the BLAS summation-noise floor —
+typically near machine epsilon ($\sim 10^{-15}$). The distributed fit *is*
+the pooled fit; only the path that produced it differs.
 
 ## Pattern 2 — streaming accumulator
 
@@ -192,30 +194,38 @@ max(abs(fit_acc$beta - fit_dist$beta))
 ## Identifiability for OD designs
 
 When `rowSums(Z)` is constant — for example, a row of $Z$ has exactly one
-"origin" indicator and one "destination" indicator, so each row sums to 2
-— the model has a one-dimensional identifiability redundancy: shifting
-every $\alpha_j$ by a constant $c$ and subtracting $\sum_j \alpha_j$
-adjustments from $\beta_0$ leaves the likelihood unchanged.
+"origin" indicator and one "destination" indicator, so each row sums to
+$s = 2$ — the model has a one-dimensional identifiability redundancy.
+For any scalar $c$, replacing
+$$
+\alpha \;\mapsto\; \alpha + c\mathbf{1}, \qquad
+\beta_0 \;\mapsto\; \beta_0 - c\,s
+$$
+leaves $Z\alpha + \beta_0\mathbf{1}$ — and hence the likelihood —
+unchanged. `vcmm()` detects this automatically by inspecting the raw $Z$
+matrix and applies a centering shift so that
+$\sum_j \hat\alpha_j = 0$.
 
-`vcmm()` detects this automatically and applies a centering shift so
-$\sum_j \hat\alpha_j = 0$. `fit_from_summaries()` cannot detect it from
-the summaries alone (the row-sum information is lost when you collapse to
-$X^\top Z$), so you have to pass it in via `rowsum_constant`:
+`fit_from_summaries()` doesn't auto-detect the row-sum from the
+sufficient statistics, so you supply it explicitly via `rowsum_constant`:
 
 ```{r od-shift, eval = FALSE}
+# Skeleton — see vignette("od-migration") for a complete runnable example.
+# G and Sigma_spatial come from the OD setup (number of regions and an
+# initial spatial covariance matrix).
 fit_dist_od <- fit_from_summaries(
   summaries, penalty = design$penalty, control = ctrl,
   method = "ss", re_cov = "kronecker",
-  n_groups = G,
-  Sigma_spatial_init = Sigma_spatial,
-  rowsum_constant    = 2     # <-- this matches what vcmm() applies
+  n_groups           = G,              # number of OD regions
+  Sigma_spatial_init = Sigma_spatial,  # G x G initial spatial covariance
+  rowsum_constant    = 2               # matches what vcmm() applies internally
 )
 ```
 
 Without `rowsum_constant`, the distributed fit's $\hat\beta_0$ and
-$\hat\alpha$ differ from the pooled fit's by exactly the centering
-shift. The fits are the same up to the redundancy; the choice of
-representative within the equivalence class is what differs.
+$\hat\alpha$ differ from the pooled fit's by exactly the centering shift.
+The fits are the same up to the redundancy; only the choice of
+representative within the equivalence class differs.
 
 See `vignette("od-migration", package = "cevcmm")` for a full OD example.
 
