@@ -28,28 +28,28 @@ Commit this file at the end of every working day.
 | 10  | ✅     | `R/distributed.R` — `node_summary()` + `fit_from_summaries()` | 3-node mock fit = single-node fit |
 | 11  | ✅     | S3: `print`, `summary`, `coef`, `fixef`, `ranef` | All five give sensible output |
 | 12  | ✅     | S3: `predict.vcmm` (with newdata), `vcov.vcmm`, `logLik.vcmm` | Predictions match held-out MSPE |
-| 13  | 🚧     | `plot.vcmm` — varying-coef CI bands, residuals, RE QQ | Three plot types render |
-| 14  | ⬜     | Integration day — full end-to-end on OD and dense | Both match current code numerically |
+| 13  | ✅     | `plot.vcmm` — varying-coef CI bands, residuals, RE QQ | Three plot types render |
+| 14  | ✅    | Integration day — full end-to-end on OD and dense | Both match current code numerically |
 
 ## Week 3 — Rcpp + tests
 
 | Day | Status | Deliverable | Done when |
 |----:|:------:|-------------|-----------|
-| 15  | ⬜     | `src/Makevars`, profile to confirm hot paths | Profile shows accumulation + solve > 70% |
-| 16  | ⬜     | Rcpp `accumulate_ss_cpp()` with RcppArmadillo | ≥5× faster on N=500k; output identical to 1e-12 |
-| 17  | ⬜     | Rcpp `ss_solve_cpp()` iteration kernel | ≥2× faster; identical iterates |
-| 18  | ⬜     | RSpectra truncated-SVD path; auto-route by q | SVD path runs on q=300 ill-cond test |
-| 19  | ⬜     | Benchmark Rcpp vs R; document in `inst/benchmarks/` | Speedup table written |
-| 20  | ⬜     | `tests/testthat/test-ss-recovers-MLE.R`, `test-csl-onestep-equivalence.R` | Tests pass; coverage ≥70% on core |
-| 21  | ⬜     | `test-svd-stability.R`, `test-kronecker-recovery.R`, `test-distributed-equals-pooled.R`, `test-spec-parser.R` | Coverage ≥85% overall |
+| 15  | ✅     | `src/Makevars`, profile to confirm hot paths | Profile shows accumulation + solve > 70% |
+| 16  | ✅     | Rcpp `accumulate_ss_cpp()` with RcppArmadillo | ≥5× faster on N=500k; output identical to 1e-12 |
+| 17  | ✅     | Rcpp `ss_solve_cpp()` iteration kernel | ≥2× faster; identical iterates |
+| 18  | ✅     | RSpectra truncated-SVD path; auto-route by q | SVD path runs on q=300 ill-cond test |
+| 19  | ✅     | Benchmark Rcpp vs R; document in `inst/benchmarks/` | Speedup table written |
+| 20  | ✅     | `tests/testthat/test-ss-recovers-MLE.R`, `test-csl-onestep-equivalence.R` | Tests pass; coverage ≥70% on core |
+| 21  | ✅     | `test-svd-stability.R`, `test-kronecker-recovery.R`, `test-distributed-equals-pooled.R`, `test-spec-parser.R` | Coverage ≥85% overall |
 
 ## Week 4 — Docs, vignettes, CRAN prep
 
 | Day | Status | Deliverable | Done when |
 |----:|:------:|-------------|-----------|
-| 22  | ⬜     | Vignette 1: "Getting started" | Knits under 30s |
-| 23  | ⬜     | Vignette 2: "Distributed fitting" | Knits; recovery vs pooled shown |
-| 24  | ⬜     | Vignette 3: "OD migration" (small `inst/extdata/`) | Knits; reproduces one paper figure |
+| 22  | ✅     | Vignette 1: "Getting started" | Knits under 30s |
+| 23  | ✅     | Vignette 2: "Distributed fitting" | Knits; recovery vs pooled shown |
+| 24  | 🚧     | Vignette 3: "OD migration" (small `inst/extdata/`) | Knits; reproduces one paper figure |
 | 25  | ⬜     | All man pages, `README.Rmd`, `NEWS.md`, `pkgdown` config | `pkgdown::build_site()` builds |
 | 26  | ⬜     | `R CMD check --as-cran` clean | 0 errors, 0 warnings, ≤1 NOTE |
 | 27  | ⬜     | GitHub Actions CI, codecov, **release v0.1.0** (Zenodo DOI for CV) | Green badges; v0.1.0 tagged with binaries |
