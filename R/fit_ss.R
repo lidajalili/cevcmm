@@ -208,6 +208,24 @@ fit_ss <- function(stats, penalty, control = vcmm_control(),
     re_cov_state, alpha, sigma_eps, K_inv, p, q, control
   )
 
+  ## If the EM correction mutated re_cov_state (only happens for
+  ## kronecker/separable with update_variance = TRUE), the prior precision
+  ## changed, so the K_inv we cached above is no longer consistent with
+  ## the stored re_cov_state$Sigma_left. Rebuild K_inv from the post-EM
+  ## precision so downstream vcov() / summary() report Wald SEs that
+  ## match the final Sigma_left. Cheap: one extra (p+q) x (p+q)
+  ## inversion in the kron/separable branch; no-op for diag.
+  if (!is.null(re_cov_state) && !identical(re_cov_state$type, "diag") &&
+      isTRUE(control$update_variance)) {
+    prior_precision_final <- .build_prior_precision(re_cov_state, sigma_eps,
+                                                    sigma_alpha, q)
+    V_aa_final <- stats$ZtZ + prior_precision_final
+    K_final    <- rbind(cbind(V_bb_final,   V_ba_final),
+                        cbind(t(V_ba_final), V_aa_final))
+    K_final    <- (K_final + t(K_final)) / 2
+    K_inv      <- invert_matrix(K_final, q = p + q)
+  }
+
   ## Marginal log-likelihood at convergence (used by logLik.vcmm_fit, AIC, BIC).
   marginal_loglik <- .compute_marginal_loglik(
     stats = stats, beta = beta, alpha = alpha,
@@ -241,6 +259,17 @@ fit_ss <- function(stats, penalty, control = vcmm_control(),
   )
   class(out) <- c("vcmm_fit", "list")
   out
+}
+
+## Format an elapsed time in seconds for printing. Sub-millisecond
+## proc.time() values underflow to "0.0000" with the naive %.4f format
+## (typical on Apple Silicon for small N); show them as "<0.001" so the
+## user sees that the fit was very fast rather than thinking the timer
+## is broken. Returns "NA" for NULL / NA inputs.
+.fmt_elapsed <- function(s) {
+  if (is.null(s) || is.na(s)) return("NA")
+  if (s < 0.0005) return("<0.001")
+  sprintf("%.4f", s)
 }
 
 #' @rdname fit_ss
@@ -312,10 +341,12 @@ print.vcmm_fit <- function(x, ...) {
 
   if (identical(x$method, "CSL") &&
       !is.null(x$pilot_elapsed_sec) && !is.null(x$step_elapsed_sec)) {
-    cat(sprintf("  elapsed     : %.4f sec (pilot %.4fs + newton %.4fs)\n",
-                x$elapsed_sec, x$pilot_elapsed_sec, x$step_elapsed_sec))
+    cat(sprintf("  elapsed     : %s sec (pilot %ss + newton %ss)\n",
+                .fmt_elapsed(x$elapsed_sec),
+                .fmt_elapsed(x$pilot_elapsed_sec),
+                .fmt_elapsed(x$step_elapsed_sec)))
   } else {
-    cat(sprintf("  elapsed     : %.4f sec\n", x$elapsed_sec))
+    cat(sprintf("  elapsed     : %s sec\n", .fmt_elapsed(x$elapsed_sec)))
   }
 
   invisible(x)

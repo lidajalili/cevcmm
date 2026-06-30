@@ -277,6 +277,22 @@ fit_csl <- function(stats,
   prior_precision_final <- .build_prior_precision(re_cov_state, sigma_eps,
                                                   sigma_alpha, q)
   V_aa_final <- stats$ZtZ + prior_precision_final
+
+  ## Rebuild K_inv from the post-EM precision so vcov() / summary() use
+  ## Wald SEs consistent with the stored re_cov_state$Sigma_left. The
+  ## one-step Newton update above used the pre-EM K_inv by design (the
+  ## EM correction is computed from it), so this rebuild is purely for
+  ## downstream inference, not the point estimate. No-op cost when
+  ## re_cov = "diag" or update_variance = FALSE; one extra (p+q)x(p+q)
+  ## inversion in the kron/separable + update_variance branch.
+  if (!is.null(re_cov_state) && !identical(re_cov_state$type, "diag") &&
+      isTRUE(control$update_variance)) {
+    K_post <- rbind(cbind(V_bb,   V_ba),
+                    cbind(t(V_ba), V_aa_final))
+    K_post <- (K_post + t(K_post)) / 2
+    K_inv  <- invert_matrix(K_post, q = p + q)
+  }
+
   marginal_loglik <- .compute_marginal_loglik(
     stats = stats, beta = beta_csl, alpha = alpha_csl,
     sigma_eps = sigma_eps, sigma_alpha = sigma_alpha,

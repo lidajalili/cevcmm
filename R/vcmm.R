@@ -358,6 +358,15 @@ vcmm <- function(y,
   #   (beta_0, alpha) -> (beta_0 - s c, alpha + c 1).
   # Re-distribute the slack so sum(alpha_hat) = 0 and beta_0 absorbs the
   # shift. Zero-cost adjustment along the unidentified direction.
+  #
+  # Note on ordering: this happens AFTER fit$K_inv has been cached inside
+  # fit_ss / fit_csl. That is intentional and safe. The shift is purely
+  # along the null direction of the *likelihood*, whereas K_inv is the
+  # inverse of the *prior-augmented* Hessian, which is non-singular by
+  # construction. Moving the point estimate within the equivalence class
+  # does not change the variance structure of the identifiable
+  # parameters, so vcov() and summary() remain numerically consistent
+  # with the shifted (beta, alpha).
   row_sums <- rowSums(Z)
   if (max(row_sums) - min(row_sums) < 1e-10) {
     s_const <- row_sums[1L]
