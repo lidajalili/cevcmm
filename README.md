@@ -1,31 +1,129 @@
-# cevcmm
 
-> Communication-Efficient Varying Coefficient Mixed-Effects Models
+<!-- README.md is generated from README.Rmd. Please edit that file, then run devtools::build_readme(). -->
 
-[![R-CMD-check](https://img.shields.io/badge/R--CMD--check-pending-lightgrey)](https://github.com/lidajalili/cevcmm)
-[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html)
+# cevcmm <img src="man/figures/logo.png" align="right" height="138" alt="" />
 
-Scalable inference for Varying Coefficient Mixed-Effects Models with
-large, correlated random effects. Implements the sufficient-statistics
-(SS), one-step communication-efficient surrogate likelihood (CSL), and
-SVD-stabilized estimators of Lin and Jalili (2026).
+<!-- badges: start -->
 
-## Status
+[![R-CMD-check](https://github.com/lidajalili/cevcmm/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/lidajalili/cevcmm/actions/workflows/R-CMD-check.yaml)
+[![Codecov test
+coverage](https://codecov.io/gh/lidajalili/cevcmm/branch/main/graph/badge.svg)](https://app.codecov.io/gh/lidajalili/cevcmm?branch=main)
+[![CRAN
+status](https://www.r-pkg.org/badges/version/cevcmm)](https://CRAN.R-project.org/package=cevcmm)
+[![Lifecycle:
+experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+<!-- badges: end -->
 
-**v0.0.0.9000 — in active development.** Public API coming in v0.1.0.
-See `ROADMAP.md` for the day-by-day plan.
+**cevcmm** fits **Varying Coefficient Mixed-Effects Models (VCMMs)** at
+scale, including settings where data is split across multiple machines
+or doesn’t fit in memory. It implements the sufficient-statistics (SS)
+and one-step communication-efficient surrogate-likelihood (CSL)
+estimators of Lin and Jalili (2026), with diagonal, Kronecker, and
+separable random-effect covariance structures.
+
+The model is
+
+$$y_i \;=\; \beta_0(t_i) \;+\; \sum_{k=1}^{K} x_{ik}\,\beta_k(t_i) \;+\; z_i^\top \alpha \;+\; \varepsilon_i,$$
+
+where each $\beta_k(t)$ is a smooth function of $t$ (cubic B-splines
+with a second-order-difference penalty),
+$\alpha \sim N(0, \Sigma_\alpha)$, and
+$\varepsilon_i \sim N(0, \sigma_\varepsilon^2)$.
 
 ## Installation
 
-Not yet available. Once v0.1.0 is released:
+You can install the released version of cevcmm from CRAN with:
 
-```r
-# install.packages("devtools")
-devtools::install_github("lidajalili/cevcmm")
+``` r
+install.packages("cevcmm")
 ```
 
-## Reference
+Or the development version from GitHub:
 
-Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications.*
+``` r
+# install.packages("remotes")
+remotes::install_github("lidajalili/cevcmm")
+```
+
+## Quick example
+
+A 500-observation fit with one varying coefficient and three diagonal
+random effects:
+
+``` r
+library(cevcmm)
+
+set.seed(1)
+N <- 500L
+q <- 3L
+
+t <- runif(N)
+x <- runif(N)
+Z <- matrix(rnorm(N * q), N, q)
+y <- 2 + sin(2 * pi * t) * x +
+     as.vector(Z %*% rnorm(q, sd = 0.4)) +
+     rnorm(N, sd = 0.5)
+
+fit <- vcmm(y, X = x, Z = Z, t = t,
+            control = vcmm_control(sigma_eps       = 0.5,
+                                   sigma_alpha     = 0.4,
+                                   update_variance = TRUE))
+fit
+#> <vcmm_fit>  Varying Coefficient Mixed-Effects Model fit
+#>   method      : SS
+#>   n_obs       : 500
+#>   p (fixed)   : 12
+#>   q (random)  : 3
+#>   RE cov      : diag
+#>   iterations  : 6 (converged)
+#>   sigma_eps   : 0.5076
+#>   sigma_alpha : 0.6327
+#>   elapsed     : <0.001 sec
+```
+
+All standard S3 methods work on the result: `coef()`, `fixef()`,
+`ranef()`, `vcov()`, `nobs()`, `logLik()`, `AIC()`, `BIC()`,
+`predict()`, `summary()`, and `plot()`.
+
+## Three vignettes
+
+Three vignettes ship with the package, covering the main use cases
+end-to-end:
+
+- **`vignette("getting-started", package = "cevcmm")`** — single-machine
+  fit on a simple diagonal-random-effects example. Walks through every
+  public S3 method.
+- **`vignette("distributed-fitting", package = "cevcmm")`** — split data
+  across $K$ nodes, compute per-node summaries with `node_summary()`,
+  and recover a fit bit-equivalent to pooled `vcmm()` via
+  `fit_from_summaries()`. Also covers the streaming-accumulator pattern
+  for memory-constrained settings.
+- **`vignette("od-migration", package = "cevcmm")`** — Kronecker
+  covariance for origin-destination flow data, using a bundled simulated
+  migration dataset.
+
+## Citation
+
+If you use cevcmm in published work, please cite:
+
+> Lin, L.-H. and Jalili, L. (2026). *Scalable and
+> Communication-Efficient Varying Coefficient Mixed-Effects Models:
+> Methodology, Theory, and Applications.* Journal of the American
+> Statistical Association (under review).
+
+BibTeX:
+
+``` bibtex
+@article{lin2026cevcmm,
+  title   = {Scalable and Communication-Efficient Varying Coefficient
+             Mixed-Effects Models: Methodology, Theory, and Applications},
+  author  = {Lin, Li-Hsiang and Jalili, Lida},
+  journal = {Journal of the American Statistical Association},
+  year    = {2026},
+  note    = {Under review}
+}
+```
+
+## License
+
+GPL-3. See the [`LICENSE`](LICENSE) file for the full text.
