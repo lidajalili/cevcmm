@@ -1,0 +1,188 @@
+---
+title: "Getting started with cevcmm"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Getting started with cevcmm}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.width = 6,
+  fig.height = 4,
+  fig.align = "center"
+)
+set.seed(1)
+```
+
+## What this package fits
+
+**cevcmm** fits Varying Coefficient Mixed-Effects Models (VCMMs):
+
+$$
+y_i = \beta_0(t_i) + \sum_{k=1}^{K} x_{ik}\,\beta_k(t_i) + z_i^\top \alpha + \varepsilon_i,
+$$
+
+where each $\beta_k(t)$ is a smooth function of $t$ (cubic B-splines with a
+second-order-difference penalty), $\alpha \sim N(0, \Sigma_\alpha)$ are
+random effects with one of three covariance structures (`diag`, `kronecker`,
+`separable`), and $\varepsilon_i \sim N(0, \sigma_\varepsilon^2)$.
+
+The package implements two estimators from Lin and Jalili (2026):
+
+- **SS** (sufficient-statistics): iterates to convergence using only the
+  aggregated summary $(a,\,b,\,C,\,Z^\top Z,\,Z^\top y,\,X^\top Z)$. Raw
+  data is not needed once the summaries exist.
+- **CSL** (one-step communication-efficient): a single Newton refinement
+  from a pilot estimator. Asymptotically equivalent to SS at a fraction of
+  the cost when the pilot is good enough.
+
+This vignette walks through the simplest case: a single varying coefficient,
+diagonal random effects, all on one machine.
+
+## Setup
+
+```{r setup}
+library(cevcmm)
+```
+
+## Simulate a small dataset
+
+$N = 500$ observations, $K = 1$ varying covariate, $q = 3$ independent
+random effects.
+
+```{r simulate}
+set.seed(1)
+N <- 500L
+q <- 3L
+
+t <- runif(N)
+x <- runif(N)
+Z <- matrix(rnorm(N * q), N, q)
+
+beta_0     <- 2
+beta_1_fun <- function(u) sin(2 * pi * u)
+alpha_true <- rnorm(q, sd = 0.4)
+sigma_eps  <- 0.5
+
+y <- beta_0 + beta_1_fun(t) * x +
+     as.vector(Z %*% alpha_true) +
+     rnorm(N, sd = sigma_eps)
+```
+
+## Fit
+
+A single `vcmm()` call. With `method = "auto"` (default), CSL is picked when
+$N \cdot q > 10^5$ or $q > 50$; otherwise SS. This small example picks SS.
+
+```{r fit}
+fit <- vcmm(y, X = x, Z = Z, t = t,
+            method  = "auto",
+            re_cov  = "diag",
+            control = vcmm_control(sigma_eps       = 0.5,
+                                   sigma_alpha     = 0.4,
+                                   update_variance = TRUE))
+fit
+```
+
+## Inspect the fit
+
+All standard S3 methods work on a `vcmm_fit`.
+
+```{r inspect}
+# Fixed-effects coefficient vector (intercept + spline basis coefs)
+head(coef(fit))
+
+# Same vector, reshaped: intercept + (basis x covariate) matrix
+fx <- fixef(fit)
+fx$intercept
+dim(fx$varying)
+
+# Random effects
+ranef(fit)
+
+# Sample size and residual SD
+nobs(fit)
+fit$sigma_eps
+
+# Log-likelihood, AIC, BIC
+logLik(fit)
+AIC(fit); BIC(fit)
+```
+
+A full `summary()` includes a coefficient table with z-tests:
+
+```{r summary}
+summary(fit)
+```
+
+## Recover the varying coefficient
+
+`varying_coef()` evaluates $\hat\beta_k(t)$ at any grid with optional
+pointwise standard errors.
+
+```{r curve, fig.cap = "Estimated and true varying coefficient."}
+t_grid <- seq(0, 1, length.out = 100L)
+vc     <- varying_coef(fit, t_new = t_grid, k = 1L, se.fit = TRUE)
+
+plot(t_grid, vc$fit, type = "l", lwd = 2, col = "steelblue",
+     xlab = "t", ylab = expression(hat(beta)[1](t)),
+     ylim = range(vc$fit - 2 * vc$se.fit,
+                  vc$fit + 2 * vc$se.fit,
+                  beta_1_fun(t_grid)))
+polygon(c(t_grid, rev(t_grid)),
+        c(vc$fit + 2 * vc$se.fit, rev(vc$fit - 2 * vc$se.fit)),
+        col = adjustcolor("steelblue", alpha.f = 0.25), border = NA)
+lines(t_grid, beta_1_fun(t_grid), col = "red", lty = 2, lwd = 2)
+legend("topright", c("estimate", "truth"),
+       col = c("steelblue", "red"), lty = c(1, 2), lwd = 2, bty = "n")
+```
+
+The estimate tracks the true $\sin(2\pi t)$ across the unit interval; the
+band is the pointwise 95% Wald interval.
+
+## Predict on new data
+
+```{r predict}
+new_idx <- sample.int(N, 5L)
+newdata <- list(t = t[new_idx],
+                X = x[new_idx],
+                Z = Z[new_idx, , drop = FALSE])
+
+predict(fit, newdata = newdata)
+y[new_idx]
+```
+
+With `se.fit = TRUE`:
+
+```{r predict-se}
+pred <- predict(fit, newdata = newdata, se.fit = TRUE)
+cbind(fit = pred$fit, se = pred$se.fit)
+```
+
+## Built-in diagnostic plots
+
+`plot(fit, which = 1)` shows the varying coefficient with its confidence
+band; `which = 2` requires the training data and shows residual
+diagnostics; `which = 3` shows random-effect diagnostics. See
+`?plot.vcmm_fit`.
+
+```{r plot, fig.cap = "Built-in plot.vcmm_fit panel 1."}
+plot(fit, which = 1)
+```
+
+## Where to go next
+
+- **Distributed fitting** — when data lives on multiple nodes or won't fit
+  in memory: `vignette("distributed-fitting", package = "cevcmm")`.
+- **Origin-destination migration** — Kronecker covariance for OD-flow data:
+  `vignette("od-migration", package = "cevcmm")`.
+
+## Reference
+
+Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
+Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
+Applications.* JASA (under review).

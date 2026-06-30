@@ -16,6 +16,7 @@ Description: Scalable inference for Varying Coefficient Mixed-Effects
     Lin and Jalili (2026).
 License: GPL (>= 3)
 Encoding: UTF-8
+VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
 URL: https://github.com/lidajalili/cevcmm
 BugReports: https://github.com/lidajalili/cevcmm/issues
