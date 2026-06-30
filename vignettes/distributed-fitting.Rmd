@@ -1,0 +1,233 @@
+---
+title: "Distributed fitting with cevcmm"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Distributed fitting with cevcmm}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse  = TRUE,
+  comment   = "#>",
+  fig.width = 6,
+  fig.height = 4,
+  fig.align = "center"
+)
+set.seed(23)
+```
+
+## When you need this
+
+Three scenarios call for the distributed API:
+
+1. **Data lives on $K$ different machines** — privacy or governance constraints
+   prevent pooling, but each site can publish a small summary.
+2. **Data is on one machine but doesn't fit in memory** — process chunk by
+   chunk and accumulate.
+3. **Streaming data** — new batches arrive over time and refitting from
+   scratch is expensive.
+
+All three are solved with the same primitive: each chunk produces a
+`vcmm_ss` summary; summaries are additive; the fit is computed from the
+aggregate.
+
+## The math guarantee
+
+Theorem 1 of Lin and Jalili (2026): partition the data into $K$ chunks,
+compute a sufficient-statistics summary on each chunk, sum the summaries,
+and fit. The result is **bit-equivalent** (up to BLAS summation noise) to
+fitting on the pooled data. The summaries lose no information — they
+*are* the sufficient statistics for the VCMM likelihood.
+
+The summary on chunk $k$ stores
+$$
+\bigl(a_k,\; b_k,\; C_k,\; (Z^\top Z)_k,\; (Z^\top y)_k,\; (X^\top Z)_k,\; n_k\bigr)
+$$
+where $a = y^\top y$, $b = X^\top y$, $C = X^\top X$. Adding summaries
+across chunks is element-wise addition; the aggregate is the same as the
+single summary you would have computed on the pooled data.
+
+## Setup
+
+```{r setup}
+library(cevcmm)
+```
+
+## Simulate
+
+A modest example: $N = 1200$ observations, $K = 1$ varying covariate,
+$q = 4$ independent random effects. Then we'll split it into 3 nodes.
+
+```{r simulate}
+set.seed(23)
+N <- 1200L
+q <- 4L
+
+t <- runif(N)
+x <- runif(N)
+Z <- matrix(rnorm(N * q), N, q)
+
+beta_1_fun <- function(u) sin(2 * pi * u)
+alpha_true <- rnorm(q, sd = 0.5)
+y <- 2 + beta_1_fun(t) * x + as.vector(Z %*% alpha_true) +
+     rnorm(N, sd = 0.5)
+```
+
+## Pattern 1 — list of node summaries
+
+This is the "data on $K$ machines" case. Each node:
+
+1. computes the same spline design matrix on its own slice of $t$ and $X$,
+2. calls `node_summary()` on its slice,
+3. ships the resulting `vcmm_ss` object (small — a few KB regardless of $n_k$)
+   to the central node.
+
+The central node sums the summaries and calls `fit_from_summaries()`.
+
+```{r split}
+# Assign each observation to one of 3 nodes
+node_id <- sample.int(3L, N, replace = TRUE)
+splits  <- split(seq_len(N), node_id)
+lengths(splits)
+```
+
+Build the spline design once. (In a real deployment, each node would
+construct its piece of the design locally using the same `n_basis`,
+`degree`, and knot placement — the package handles this automatically as
+long as the inputs agree.)
+
+```{r design}
+design <- build_vcmm_design(X = x, t = t)
+X_d    <- design$X_design
+dim(X_d)   # N x p, where p = 12 = intercept + 11 spline coefs
+```
+
+Each node produces a summary:
+
+```{r node-summaries}
+summaries <- lapply(splits, function(idx) {
+  node_summary(y[idx], X_d[idx, , drop = FALSE], Z[idx, , drop = FALSE])
+})
+summaries[[1]]
+```
+
+The size of each summary is independent of $n_k$:
+
+```{r size}
+object.size(summaries[[1]])
+object.size(y[splits[[1]]]) + object.size(X_d[splits[[1]], ])
+```
+
+Now fit from the summaries — pass the list directly:
+
+```{r fit-dist}
+ctrl <- vcmm_control(sigma_eps       = 0.5,
+                     sigma_alpha     = 0.5,
+                     update_variance = TRUE)
+
+fit_dist <- fit_from_summaries(summaries,
+                               penalty = design$penalty,
+                               control = ctrl,
+                               method  = "ss",
+                               re_cov  = "diag")
+fit_dist
+```
+
+## Verify bit-equivalence against pooled fitting
+
+```{r fit-pooled}
+fit_pooled <- vcmm(y, X = x, Z = Z, t = t,
+                   method = "ss", re_cov = "diag",
+                   control = ctrl)
+
+# beta estimates
+max(abs(fit_pooled$beta - fit_dist$beta))
+
+# alpha estimates
+max(abs(fit_pooled$alpha - fit_dist$alpha))
+
+# variance components
+all.equal(fit_pooled$sigma_eps,   fit_dist$sigma_eps)
+all.equal(fit_pooled$sigma_alpha, fit_dist$sigma_alpha)
+```
+
+The maximum coefficient difference is at the BLAS summation-noise level
+(typically $\sim 10^{-12}$). The distributed fit *is* the pooled fit; only
+the path that produced it differs.
+
+## Pattern 2 — streaming accumulator
+
+When you have many small chunks and don't want to keep them all in
+memory, use the accumulator instead of a list. The accumulator stores a
+running sum of the sufficient statistics; chunks can be incorporated and
+discarded as they arrive.
+
+```{r accumulator}
+p <- ncol(X_d)
+acc <- init_accumulator(p = p, q = q)
+
+# Pretend chunks arrive one at a time
+for (k in seq_along(splits)) {
+  idx <- splits[[k]]
+  ss_k <- compute_sufficient_stats(y[idx],
+                                   X_d[idx, , drop = FALSE],
+                                   Z[idx, , drop = FALSE])
+  acc <- accumulate_stats(acc, ss_k)
+}
+acc
+```
+
+Fit from the accumulator — same call signature:
+
+```{r fit-acc}
+fit_acc <- fit_from_summaries(acc, penalty = design$penalty,
+                              control = ctrl, method = "ss", re_cov = "diag")
+
+# Same answer as Pattern 1
+max(abs(fit_acc$beta - fit_dist$beta))
+```
+
+## Identifiability for OD designs
+
+When `rowSums(Z)` is constant — for example, a row of $Z$ has exactly one
+"origin" indicator and one "destination" indicator, so each row sums to 2
+— the model has a one-dimensional identifiability redundancy: shifting
+every $\alpha_j$ by a constant $c$ and subtracting $\sum_j \alpha_j$
+adjustments from $\beta_0$ leaves the likelihood unchanged.
+
+`vcmm()` detects this automatically and applies a centering shift so
+$\sum_j \hat\alpha_j = 0$. `fit_from_summaries()` cannot detect it from
+the summaries alone (the row-sum information is lost when you collapse to
+$X^\top Z$), so you have to pass it in via `rowsum_constant`:
+
+```{r od-shift, eval = FALSE}
+fit_dist_od <- fit_from_summaries(
+  summaries, penalty = design$penalty, control = ctrl,
+  method = "ss", re_cov = "kronecker",
+  n_groups = G,
+  Sigma_spatial_init = Sigma_spatial,
+  rowsum_constant    = 2     # <-- this matches what vcmm() applies
+)
+```
+
+Without `rowsum_constant`, the distributed fit's $\hat\beta_0$ and
+$\hat\alpha$ differ from the pooled fit's by exactly the centering
+shift. The fits are the same up to the redundancy; the choice of
+representative within the equivalence class is what differs.
+
+See `vignette("od-migration", package = "cevcmm")` for a full OD example.
+
+## Where to go next
+
+- **OD migration with Kronecker covariance**:
+  `vignette("od-migration", package = "cevcmm")`.
+- **Basic single-machine usage**:
+  `vignette("getting-started", package = "cevcmm")`.
+
+## Reference
+
+Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
+Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
+Applications.* JASA (under review).
