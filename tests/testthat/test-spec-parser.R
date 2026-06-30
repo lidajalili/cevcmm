@@ -106,9 +106,19 @@ test_that("build_vcmm_design warns when normalize_t = FALSE and t out of range",
   N <- 50L
   t <- runif(N, 0, 2)   # values > 1
   x <- runif(N)
-  expect_warning(
+  # build_vcmm_design emits TWO warnings: its own "extrapolate" message
+  # AND a follow-on bs() "beyond boundary knots" message. Capture both
+  # via withCallingHandlers so neither bubbles up as a residual warning
+  # in the test report, then assert the one we care about was emitted.
+  msgs <- character()
+  withCallingHandlers(
     build_vcmm_design(X = x, t = t, normalize_t = FALSE),
-    "extrapolate")
+    warning = function(w) {
+      msgs <<- c(msgs, conditionMessage(w))
+      invokeRestart("muffleWarning")
+    }
+  )
+  expect_true(any(grepl("extrapolate", msgs)))
 })
 
 # ---- build_penalty_matrix --------------------------------------------------
