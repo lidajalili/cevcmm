@@ -1,0 +1,117 @@
+url: https://lidajalili.github.io/cevcmm/
+
+template:
+  bootstrap: 5
+  bootswatch: cosmo
+
+home:
+  title: cevcmm — Communication-Efficient Varying Coefficient Mixed-Effects Models
+  description: >
+    Fits Varying Coefficient Mixed-Effects Models (VCMMs) at scale, including
+    distributed and memory-constrained settings. Implements the sufficient-
+    statistics (SS) and one-step communication-efficient surrogate-likelihood
+    (CSL) estimators of Lin and Jalili (2026).
+
+navbar:
+  structure:
+    left:  [intro, reference, articles, news]
+    right: [search, github]
+  components:
+    intro:
+      text: Get started
+      href: articles/getting-started.html
+    articles:
+      text: Articles
+      menu:
+        - text: Getting started
+          href: articles/getting-started.html
+        - text: Distributed fitting
+          href: articles/distributed-fitting.html
+        - text: OD migration with Kronecker covariance
+          href: articles/od-migration.html
+    news:
+      text: News
+      href: news/index.html
+    github:
+      icon: fab fa-github
+      href: https://github.com/lidajalili/cevcmm
+      aria-label: GitHub
+
+reference:
+  - title: Main fit function
+    desc: Single-call entry point for all three estimators and covariance modes.
+    contents:
+      - vcmm
+      - vcmm_control
+
+  - title: Distributed and streaming API
+    desc: >
+      Per-node summaries that aggregate additively, plus the central
+      fit function that consumes them.
+    contents:
+      - node_summary
+      - compute_sufficient_stats
+      - init_accumulator
+      - accumulate_stats
+      - "+.vcmm_ss"
+      - fit_from_summaries
+
+  - title: Lower-level estimators
+    desc: >
+      Direct access to the SS and CSL fit functions, called internally
+      by vcmm(). Advanced users only.
+    contents:
+      - fit_ss
+      - fit_csl
+
+  - title: Design and penalty
+    desc: B-spline design matrix and difference-penalty construction.
+    contents:
+      - build_vcmm_design
+      - build_penalty_matrix
+
+  - title: Covariance utilities
+    desc: Helpers for the Kronecker / separable covariance machinery.
+    contents:
+      - build_kronecker_precision
+      - estimate_kronecker_components
+
+  - title: Linear-algebra backends
+    desc: Stabilised matrix inversion used inside the estimators.
+    contents:
+      - invert_matrix
+      - svd_pseudo_inverse
+      - split_merge_svd_row
+      - cevcmm_rcpp_check
+
+  - title: S3 methods on fitted models
+    desc: Standard generics for inspecting and using a vcmm_fit.
+    contents:
+      - coef.vcmm_fit
+      - fixef
+      - fixef.vcmm_fit
+      - ranef
+      - ranef.vcmm_fit
+      - vcov.vcmm_fit
+      - nobs.vcmm_fit
+      - logLik.vcmm_fit
+      - summary.vcmm_fit
+      - predict.vcmm_fit
+      - plot.vcmm_fit
+      - varying_coef
+
+  - title: Package
+    contents:
+      - cevcmm-package
+
+articles:
+  - title: Vignettes
+    contents:
+      - getting-started
+      - distributed-fitting
+      - od-migration
+
+news:
+  releases:
+    - text: "v0.1.0 (first public release)"
+      href: news/index.html

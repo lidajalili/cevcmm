@@ -18,7 +18,7 @@ License: GPL (>= 3)
 Encoding: UTF-8
 VignetteBuilder: knitr
 Roxygen: list(markdown = TRUE)
-URL: https://github.com/lidajalili/cevcmm
+URL: https://lidajalili.github.io/cevcmm, https://github.com/lidajalili/cevcmm
 BugReports: https://github.com/lidajalili/cevcmm/issues
 Depends:
     R (>= 4.0.0)

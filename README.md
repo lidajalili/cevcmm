@@ -1,7 +1,7 @@
 
 <!-- README.md is generated from README.Rmd. Please edit that file, then run devtools::build_readme(). -->
 
-# cevcmm <img src="man/figures/logo.png" align="right" height="138" alt="" />
+# cevcmm
 
 <!-- badges: start -->
 
@@ -78,7 +78,7 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5076
 #>   sigma_alpha : 0.6327
-#>   elapsed     : <0.001 sec
+#>   elapsed     : 0.0010 sec
 ```
 
 All standard S3 methods work on the result: `coef()`, `fixef()`,

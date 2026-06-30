@@ -55,3 +55,4 @@ src/*.dll
 .DS_Store
 /doc/
 /Meta/
+docs
