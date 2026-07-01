@@ -237,5 +237,5 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5000
 #>   sigma_alpha : 0.5000
-#>   elapsed     : <0.001 sec
+#>   elapsed     : 0.0010 sec
 ```
