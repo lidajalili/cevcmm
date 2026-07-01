@@ -1,4 +1,13 @@
-## Windows variant of Makevars. Same minimal content as the Unix
-## file: declare C++17 and let RcppArmadillo handle BLAS / LAPACK /
-## Fortran linking via LinkingTo: RcppArmadillo.
+## Windows-specific build config.
+##
+## Unlike macOS and Linux, Rtools45+ does NOT auto-link BLAS / LAPACK
+## symbols even when RcppArmadillo is a LinkingTo dependency. Without
+## these explicit -lRlapack -lRblas -lgfortran flags, the .dll fails to
+## link at build time with 'undefined reference to `dgemm_`,
+## `dgesvd_`, `dpotrf_`, ...' The macOS Makevars deliberately omits
+## these because R's compiled-in FLIBS on macOS can reference a
+## gfortran install path that no longer exists after an OS upgrade;
+## the Windows toolchain has no equivalent problem.
 CXX_STD = CXX17
+
+PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)
