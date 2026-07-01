@@ -77,6 +77,29 @@
 #' EM-style estimator (Theorem 1 \eqn{M_\eta} rule) when
 #' \code{control$update_variance = TRUE}.
 #'
+#' \strong{Choosing \code{re_cov}.} The three modes specify the
+#' assumed covariance structure of the random-effects vector
+#' \eqn{\alpha}; they do \strong{not} constrain what \code{Z}'s
+#' entries look like. The distribution of \code{Z} (binary
+#' indicators, continuous values, mixed) does not enter this choice
+#' --- only the structure of \eqn{\alpha} does. Pick by data shape:
+#' \itemize{
+#'   \item \code{"diag"}: independent random effects, one per group
+#'     or subject, no assumed cross-group dependence. Simplest case.
+#'     Use when each group contributes a single offset and groups
+#'     are exchangeable.
+#'   \item \code{"kronecker"}: origin-destination flow data. Every
+#'     row of \code{Z} activates one origin indicator and one
+#'     destination indicator, so \code{ncol(Z) = 2 * G} where
+#'     \eqn{G} is the number of regions. The 2x2 left block
+#'     captures origin/destination dependence; the \eqn{G \times G}
+#'     right block captures spatial dependence between regions.
+#'   \item \code{"separable"}: each group carries multiple
+#'     correlated random effects (\code{q_left > 2}) --- for
+#'     example a random intercept plus a random slope per region.
+#'     Use when the per-group random-effect dimension exceeds 2.
+#' }
+#'
 #' @param y Numeric response vector of length \eqn{n}.
 #' @param X Numeric \eqn{n \times K} matrix (or length-\eqn{n} vector if
 #'   \eqn{K = 1}) of covariates that get varying coefficients in
@@ -358,15 +381,6 @@ vcmm <- function(y,
   #   (beta_0, alpha) -> (beta_0 - s c, alpha + c 1).
   # Re-distribute the slack so sum(alpha_hat) = 0 and beta_0 absorbs the
   # shift. Zero-cost adjustment along the unidentified direction.
-  #
-  # Note on ordering: this happens AFTER fit$K_inv has been cached inside
-  # fit_ss / fit_csl. That is intentional and safe. The shift is purely
-  # along the null direction of the *likelihood*, whereas K_inv is the
-  # inverse of the *prior-augmented* Hessian, which is non-singular by
-  # construction. Moving the point estimate within the equivalence class
-  # does not change the variance structure of the identifiable
-  # parameters, so vcov() and summary() remain numerically consistent
-  # with the shifted (beta, alpha).
   row_sums <- rowSums(Z)
   if (max(row_sums) - min(row_sums) < 1e-10) {
     s_const <- row_sums[1L]

@@ -161,6 +161,29 @@ phi)} for OD; AR(1) for separable). The left-side covariance
 (\code{Sigma_2x2} / \code{Sigma_q}) is updated every iteration via the
 EM-style estimator (Theorem 1 \eqn{M_\eta} rule) when
 \code{control$update_variance = TRUE}.
+
+\strong{Choosing \code{re_cov}.} The three modes specify the
+assumed covariance structure of the random-effects vector
+\eqn{\alpha}; they do \strong{not} constrain what \code{Z}'s
+entries look like. The distribution of \code{Z} (binary
+indicators, continuous values, mixed) does not enter this choice
+--- only the structure of \eqn{\alpha} does. Pick by data shape:
+\itemize{
+\item \code{"diag"}: independent random effects, one per group
+or subject, no assumed cross-group dependence. Simplest case.
+Use when each group contributes a single offset and groups
+are exchangeable.
+\item \code{"kronecker"}: origin-destination flow data. Every
+row of \code{Z} activates one origin indicator and one
+destination indicator, so \code{ncol(Z) = 2 * G} where
+\eqn{G} is the number of regions. The 2x2 left block
+captures origin/destination dependence; the \eqn{G \times G}
+right block captures spatial dependence between regions.
+\item \code{"separable"}: each group carries multiple
+correlated random effects (\code{q_left > 2}) --- for
+example a random intercept plus a random slope per region.
+Use when the per-group random-effect dimension exceeds 2.
+}
 }
 \examples{
 set.seed(1)

@@ -74,6 +74,18 @@ fit
 
 All standard S3 methods work on the result: `coef()`, `fixef()`, `ranef()`, `vcov()`, `nobs()`, `logLik()`, `AIC()`, `BIC()`, `predict()`, `summary()`, and `plot()`.
 
+## Choosing the random-effects structure
+
+The package supports three `re_cov` modes. They specify how the random-effects vector $\alpha$ is assumed to covary — **not** what $Z$'s entries look like. The distribution of $Z$ (binary indicators, continuous values, or a mix) doesn't enter the choice; only the structure of $\alpha$ does.
+
+| If your data looks like... | Use | Example |
+|---|---|---|
+| Independent random effects (one offset per group/subject, no cross-group dependence) | `re_cov = "diag"` | Patients in different clinics, classrooms in different schools |
+| **Origin-destination flows** — each row has a "from" group and a "to" group | `re_cov = "kronecker"`, `q_left = 2` | Migration between regions, commuting between zones, trade between countries |
+| Multiple correlated random effects per group (e.g., random intercept + random slope per region) | `re_cov = "separable"`, `q_left = number of effects per group` | Longitudinal data where each subject has a baseline and a trend, group-shared dense designs |
+
+Each mode is demonstrated end-to-end in a vignette (links below).
+
 ## Three vignettes
 
 Three vignettes ship with the package, covering the main use cases end-to-end:
