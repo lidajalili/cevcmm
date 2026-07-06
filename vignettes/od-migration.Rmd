@@ -253,6 +253,4 @@ explanation of the distributed API.
 
 ## Reference
 
-Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications.* JASA (under review).
+Jalili, L. and Lin, L.-H. (2025). *Scalable and Communication-Efficient Varying Coefficient Mixed Effect Models: Methodology, Theory, and Applications.* arXiv:2511.12732; under review at *Journal of the American Statistical Association*.

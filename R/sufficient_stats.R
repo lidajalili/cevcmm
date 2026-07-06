@@ -2,7 +2,7 @@
 # Sufficient statistics for VCMM estimation
 #
 # Implements the per-node summary Gamma_s = (a, b, C, ZtZ, Zty, XtZ) from
-# Algorithm 1 of Lin & Jalili (2026). For the normal linear VCMM these
+# Algorithm 1 of Jalili and Lin (2025). For the normal linear VCMM these
 # summaries are computed once per data batch and aggregated additively.
 #===============================================================================
 
@@ -73,7 +73,7 @@
 #'   number of observations summarized).
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @family sufficient statistics

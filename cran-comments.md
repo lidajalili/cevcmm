@@ -21,10 +21,11 @@ package.
 
 ## Additional notes for the reviewer
 
-* The package implements the methodology of Lin and Jalili (2026),
-  forthcoming in JASA. The reference is marked `(under review)` in
-  the DESCRIPTION because the paper is still in peer review at
-  submission time; we will update the DESCRIPTION upon acceptance.
+* The package implements the methodology of Jalili and Lin (2025),
+  currently available as an arXiv preprint (arXiv:2511.12732) and
+  under review at the Journal of the American Statistical
+  Association. The DESCRIPTION and citation entries reflect this
+  status; we will update on acceptance.
 * The bundled simulated dataset under `inst/extdata/od_migration.csv`
   is approximately 88 KB; we considered RDS but kept CSV for
   human-readable inspection and to keep the load path explicit in

@@ -1,7 +1,7 @@
 #===============================================================================
 # Day 7: Paper validation Monte Carlo
 #
-# Replicates the SS-validation setting from Lin and Jalili (2026), Appendix A:
+# Replicates the SS-validation setting from Jalili and Lin (2025), Appendix A:
 #   N           = 1000  observations per replicate
 #   q           = 1     random-effect dimension
 #   beta_0      = 2     constant intercept

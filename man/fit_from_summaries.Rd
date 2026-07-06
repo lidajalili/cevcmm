@@ -59,8 +59,8 @@ A \code{vcmm_fit} object.
 }
 \description{
 Server-side fit using only the small per-node summaries; no raw data
-required. The mathematical guarantee (Theorem 1 of Lin and Jalili,
-2026) is that for a fixed partition of the data into nodes, the fit
+required. The mathematical guarantee (Theorem 1 of Jalili and Lin,
+2025) is that for a fixed partition of the data into nodes, the fit
 obtained here is identical to the one a centralised
 \code{\link{vcmm}()} call would produce on the pooled data, up to
 floating-point summation noise.
@@ -97,7 +97,7 @@ fit <- fit_from_summaries(summaries,
                            control = ctrl)
 }
 \references{
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 }
 \seealso{

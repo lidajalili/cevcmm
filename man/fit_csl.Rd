@@ -62,7 +62,7 @@ The \code{method} field is \code{"CSL"}.
 Performs a single Newton refinement of a pilot estimator using the
 aggregated sufficient statistics, implementing the one-step
 communication-efficient surrogate-likelihood (CSL) estimator of
-Lin and Jalili (2026, Section 3). For the normal linear VCMM the
+Jalili and Lin (2025, Section 3). For the normal linear VCMM the
 update is
 \deqn{
   \widehat{\theta}_{CSL}
@@ -127,6 +127,6 @@ fit_user <- fit_csl(stats, P,
                     pilot = my_pilot)
 }
 \references{
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 }

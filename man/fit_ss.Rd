@@ -50,8 +50,8 @@ A list of class \code{"vcmm_fit"} with elements:
 \description{
 Iteratively solves for the fixed-effects coefficient vector
 \code{beta} and the random-effects vector \code{alpha} using only the
-aggregated sufficient summary, implementing Algorithm 1 of Lin and
-Jalili (2026) for the normal linear VCMM. The raw response and design
+aggregated sufficient summary, implementing Algorithm 1 of Jalili and
+Lin (2025) for the normal linear VCMM. The raw response and design
 matrices are not needed: everything reads off \code{stats}, which may
 come from a single call to \code{compute_sufficient_stats()} or from a
 streaming accumulator (\code{init_accumulator()} plus repeated
@@ -96,6 +96,6 @@ fit
 coef(fit)
 }
 \references{
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 }

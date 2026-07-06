@@ -73,6 +73,6 @@ A_inv <- invert_matrix(A)
 max(abs(A \%*\% A_inv - diag(5)))  # ~ machine epsilon
 }
 \references{
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 }

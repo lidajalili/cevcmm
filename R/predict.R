@@ -111,7 +111,7 @@
 #'   \code{df} and \code{nobs} attributes.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
@@ -162,7 +162,7 @@ logLik.vcmm_fit <- function(object, ...) {
 #' \code{Z}) values, using the paper's subject-specific predictor
 #' \deqn{\hat y_i = \tilde{\mathbf x}_i^{\top} \hat{\tilde\beta}
 #'                  + \mathbf z_i^{\top} \hat\alpha}
-#' by default (Lin & Jalili, 2026, Section 5). For the alternative
+#' by default (Jalili and Lin, 2025, Section 5). For the alternative
 #' "new groups not seen in training" scenario, pass
 #' \code{include_random = FALSE} to use the marginal predictor
 #' \eqn{\hat y_i = \tilde{\mathbf x}_i^{\top} \hat{\tilde\beta}}.
@@ -206,7 +206,7 @@ logLik.vcmm_fit <- function(object, ...) {
 #' @seealso \code{\link{varying_coef}}, \code{\link{vcov.vcmm_fit}}.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export

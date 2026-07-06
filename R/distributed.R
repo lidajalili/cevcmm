@@ -1,7 +1,7 @@
 #===============================================================================
 # Distributed sufficient-statistics API for VCMM fitting
 #
-# Implements the two-stage workflow in Algorithm 1 of Lin and Jalili (2026):
+# Implements the two-stage workflow in Algorithm 1 of Jalili and Lin (2025):
 #
 #   STAGE 1 (each node, in parallel):
 #     gamma_s = node_summary(y_s, X_s, Z_s)
@@ -50,7 +50,7 @@
 #'   \code{\link{build_vcmm_design}}
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
@@ -119,8 +119,8 @@ node_summary <- function(y, X, Z) {
 #' Fit a VCMM from aggregated sufficient-statistics summaries
 #'
 #' Server-side fit using only the small per-node summaries; no raw data
-#' required. The mathematical guarantee (Theorem 1 of Lin and Jalili,
-#' 2026) is that for a fixed partition of the data into nodes, the fit
+#' required. The mathematical guarantee (Theorem 1 of Jalili and Lin,
+#' 2025) is that for a fixed partition of the data into nodes, the fit
 #' obtained here is identical to the one a centralised
 #' \code{\link{vcmm}()} call would produce on the pooled data, up to
 #' floating-point summation noise.
@@ -162,7 +162,7 @@ node_summary <- function(y, X, Z) {
 #' @seealso \code{\link{node_summary}}, \code{\link{vcmm}}.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export

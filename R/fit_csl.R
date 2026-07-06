@@ -1,7 +1,7 @@
 #===============================================================================
 # fit_csl: one-step communication-efficient surrogate-likelihood estimator
 #
-# Implements the one-step refinement of Lin and Jalili (2026, Sec. 3):
+# Implements the one-step refinement of Jalili and Lin (2025, Sec. 3):
 #   theta_csl = theta_pilot - K^{-1} g(theta_pilot)
 # where g and K use the FULL aggregated sufficient statistics. The pilot
 # estimator is either user-supplied or produced internally by running
@@ -13,7 +13,7 @@
 #' Performs a single Newton refinement of a pilot estimator using the
 #' aggregated sufficient statistics, implementing the one-step
 #' communication-efficient surrogate-likelihood (CSL) estimator of
-#' Lin and Jalili (2026, Section 3). For the normal linear VCMM the
+#' Jalili and Lin (2025, Section 3). For the normal linear VCMM the
 #' update is
 #' \deqn{
 #'   \widehat{\theta}_{CSL}
@@ -80,7 +80,7 @@
 #'   The \code{method} field is \code{"CSL"}.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export

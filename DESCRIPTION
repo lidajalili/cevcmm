@@ -13,7 +13,7 @@ Description: Scalable inference for Varying Coefficient Mixed-Effects
     sufficient-statistics, one-step communication-efficient surrogate
     likelihood, and SVD-stabilized estimators with Kronecker and
     separable covariance structures. Implements the methodology of
-    Lin and Jalili (2026).
+    Jalili and Lin (2025).
 License: GPL (>= 3)
 Encoding: UTF-8
 VignetteBuilder: knitr

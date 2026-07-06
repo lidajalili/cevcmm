@@ -24,7 +24,7 @@
 #'   throughout fitting (default 1).
 #' @param update_variance Logical. If \code{FALSE} (default), \code{sigma_eps}
 #'   and \code{sigma_alpha} are held fixed at the supplied values --
-#'   matching Algorithm 1 of Lin and Jalili (2026) as written. If
+#'   matching Algorithm 1 of Jalili and Lin (2025) as written. If
 #'   \code{TRUE}, both are re-estimated at every iteration using the
 #'   residual sum of squares formula (for \code{sigma_eps}) and a
 #'   method-of-moments update (for \code{sigma_alpha}).
@@ -35,7 +35,7 @@
 #'   options.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export

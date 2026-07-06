@@ -83,6 +83,6 @@ d2 <- build_vcmm_design(X = cbind(x1, x2), t = t, n_basis = 8)
 dim(d2$X_design)   # 200 x 17  (1 + 2*8)
 }
 \references{
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 }

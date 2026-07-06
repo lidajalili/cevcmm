@@ -11,7 +11,7 @@ First public release.
   Mixed-Effects Model. The default `method = "auto"` routes between the
   iterative sufficient-statistics estimator (SS) and the one-step
   communication-efficient surrogate-likelihood estimator (CSL) of
-  Lin and Jalili (2026), based on the problem size.
+  Jalili and Lin (2025), based on the problem size.
 
 ### Random-effect covariance
 
@@ -39,7 +39,7 @@ Three structures, all selectable via `re_cov`:
   provides a streaming alternative for chunks that arrive over time.
 * `fit_from_summaries()` accepts a single summary, a list of summaries,
   or an accumulator, and returns a fit bit-equivalent to a pooled
-  `vcmm()` call on the same data (Theorem 1 of Lin and Jalili, 2026).
+  `vcmm()` call on the same data (Theorem 1 of Jalili and Lin, 2025).
 * For designs with constant `rowSums(Z)` (e.g. origin-destination
   indicators), `fit_from_summaries()` takes a `rowsum_constant`
   argument so the same identifiability shift `vcmm()` applies
@@ -91,7 +91,7 @@ Standard generics work on the `vcmm_fit` class: `print()`, `summary()`,
 
 ## Reference
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications. *Journal of the American Statistical Association*
-(under review).
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
+Varying Coefficient Mixed Effect Models: Methodology, Theory, and
+Applications. arXiv:2511.12732; under review at *Journal of the American
+Statistical Association*.

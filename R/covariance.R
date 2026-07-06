@@ -16,7 +16,7 @@
 #                         user-facing matrices are Sigma_q and Omega_G.
 #
 # Mathematically identical -- only the parameter names and defaults differ.
-# Per Algorithm 1 of Lin and Jalili (2026) the M_eta rule updates the
+# Per Algorithm 1 of Jalili and Lin (2025) the M_eta rule updates the
 # random-effects covariance nuisance once per iteration; here we implement
 # the weighted moment estimator + EM-style posterior-variance correction
 # (Theorem 1 permits any fixed map of the summaries).
@@ -48,7 +48,7 @@
 #' @return A \eqn{kG \times kG} numeric matrix.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
@@ -112,7 +112,7 @@ build_kronecker_precision <- function(Sigma_left, Sigma_right, sigma_eps) {
 #' @return A \eqn{k \times k} symmetric positive-definite matrix.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export

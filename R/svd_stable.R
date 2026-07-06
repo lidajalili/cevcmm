@@ -1,7 +1,7 @@
 #===============================================================================
 # SVD-stabilised matrix inversion
 #
-# Implements Algorithm 2 of Lin & Jalili (2026): split-merge SVD for large
+# Implements Algorithm 2 of Jalili and Lin (2025): split-merge SVD for large
 # matrices plus a master dispatcher that auto-selects between solve() and
 # SVD pseudo-inverse based on dimension and condition number.
 #===============================================================================
@@ -365,7 +365,7 @@ svd_pseudo_inverse_rspectra <- function(A,
 #' @return A numeric matrix with the same dimensions as \code{A}.
 #'
 #' @references
-#' Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+#' Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 #' Varying Coefficient Mixed-Effects Models.
 #'
 #' @export
