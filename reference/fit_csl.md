@@ -2,8 +2,8 @@
 
 Performs a single Newton refinement of a pilot estimator using the
 aggregated sufficient statistics, implementing the one-step
-communication-efficient surrogate-likelihood (CSL) estimator of Lin and
-Jalili (2026, Section 3). For the normal linear VCMM the update is \$\$
+communication-efficient surrogate-likelihood (CSL) estimator of Jalili
+and Lin (2025, Section 3). For the normal linear VCMM the update is \$\$
 \widehat{\theta}\_{CSL} = \widehat{\theta}\_0 - K^{-1} \\
 g(\widehat{\theta}\_0), \$\$ where \\\theta = (\beta, \alpha)\\, the
 gradient \\g\\ uses the full aggregated stats, and the Hessian \\K\\
@@ -112,7 +112,7 @@ for a single-server fit, which is the typical use case of this package.
 
 ## References
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 
 ## Examples
@@ -144,7 +144,7 @@ fit
 #>   newton step : 1
 #>   sigma_eps   : 0.5000
 #>   sigma_alpha : 0.5000
-#>   elapsed     : 0.0020 sec (pilot <0.001s + newton 0.0010s)
+#>   elapsed     : 0.0010 sec (pilot 0.0010s + newton <0.001s)
 
 # Cheapest pilot: single SS step
 fit_one <- fit_csl(stats, P,

@@ -20,8 +20,8 @@ current status.
 
 ## References
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
+Varying Coefficient Mixed Effect Models: Methodology, Theory, and
 Applications.
 
 ## See also

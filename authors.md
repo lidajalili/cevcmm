@@ -9,7 +9,7 @@
 ## Citation
 
 Source:
-[`DESCRIPTION`](https://github.com/lidajalili/cevcmm/blob/v0.1.0/DESCRIPTION)
+[`DESCRIPTION`](https://github.com/lidajalili/cevcmm/blob/main/DESCRIPTION)
 
 Jalili L, Lin L (2026). *cevcmm: Communication-Efficient Varying
 Coefficient Mixed-Effects Models*. R package version 0.0.0.9000,

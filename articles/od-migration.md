@@ -144,7 +144,7 @@ fit
 #>     [0.7649  0.8597]
 #>   OD corr     : 0.8489
 #>   Sigma_spatial: 10 x 10 (G = 10 groups)
-#>   elapsed     : 0.0050 sec (pilot 0.0020s + newton 0.0010s)
+#>   elapsed     : 0.0050 sec (pilot 0.0030s + newton 0.0010s)
 ```
 
 ## Interpret the estimated $`\Sigma_{2 \times 2}`$
@@ -319,6 +319,7 @@ for the full explanation of the distributed API.
 
 ## Reference
 
-Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications.* JASA (under review).
+Jalili, L. and Lin, L.-H. (2025). *Scalable and Communication-Efficient
+Varying Coefficient Mixed Effect Models: Methodology, Theory, and
+Applications.* arXiv:2511.12732; under review at *Journal of the
+American Statistical Association*.

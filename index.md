@@ -4,7 +4,7 @@
 scale, including settings where data is split across multiple machines
 or doesn’t fit in memory. It implements the sufficient-statistics (SS)
 and one-step communication-efficient surrogate-likelihood (CSL)
-estimators of Lin and Jalili (2026), with diagonal, Kronecker, and
+estimators of Jalili and Lin (2025), with diagonal, Kronecker, and
 separable random-effect covariance structures.
 
 The model is
@@ -69,7 +69,7 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5076
 #>   sigma_alpha : 0.6327
-#>   elapsed     : 0.0010 sec
+#>   elapsed     : <0.001 sec
 ```
 
 All standard S3 methods work on the result:
@@ -125,21 +125,21 @@ end-to-end:
 
 If you use cevcmm in published work, please cite:
 
-> Lin, L.-H. and Jalili, L. (2026). *Scalable and
-> Communication-Efficient Varying Coefficient Mixed-Effects Models:
-> Methodology, Theory, and Applications.* Journal of the American
-> Statistical Association (under review).
+> Jalili, L. and Lin, L.-H. (2025). *Scalable and
+> Communication-Efficient Varying Coefficient Mixed Effect Models:
+> Methodology, Theory, and Applications.* arXiv:2511.12732; under review
+> at *Journal of the American Statistical Association*.
 
 BibTeX:
 
 ``` bibtex
-@article{lin2026cevcmm,
+@article{jalili2025cevcmm,
   title   = {Scalable and Communication-Efficient Varying Coefficient
-             Mixed-Effects Models: Methodology, Theory, and Applications},
-  author  = {Lin, Li-Hsiang and Jalili, Lida},
-  journal = {Journal of the American Statistical Association},
-  year    = {2026},
-  note    = {Under review}
+             Mixed Effect Models: Methodology, Theory, and Applications},
+  author  = {Jalili, Lida and Lin, Li-Hsiang},
+  journal = {arXiv preprint arXiv:2511.12732},
+  year    = {2025},
+  note    = {Under review at Journal of the American Statistical Association}
 }
 ```
 

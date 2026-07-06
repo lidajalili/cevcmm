@@ -53,8 +53,8 @@ print(x, ...)
 - update_variance:
 
   Logical. If `FALSE` (default), `sigma_eps` and `sigma_alpha` are held
-  fixed at the supplied values – matching Algorithm 1 of Lin and
-  Jalili (2026) as written. If `TRUE`, both are re-estimated at every
+  fixed at the supplied values – matching Algorithm 1 of Jalili and
+  Lin (2025) as written. If `TRUE`, both are re-estimated at every
   iteration using the residual sum of squares formula (for `sigma_eps`)
   and a method-of-moments update (for `sigma_alpha`).
 
@@ -77,7 +77,7 @@ A list of class `"vcmm_control"` containing the validated options.
 
 ## References
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 
 ## Examples

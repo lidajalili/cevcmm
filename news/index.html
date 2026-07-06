@@ -36,7 +36,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/lidajalili/cevcmm/blob/v0.1.0/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/lidajalili/cevcmm/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
     <div class="section level2">
@@ -47,7 +47,7 @@
 <div class="section level4">
 <h4 id="main-fit-function-0-1-0">Main fit function<a class="anchor" aria-label="anchor" href="#main-fit-function-0-1-0"></a></h4>
 <ul><li>
-<code><a href="../reference/vcmm.html">vcmm()</a></code> is the main entry point: a single call that builds the spline design, computes sufficient statistics, and fits a Varying Coefficient Mixed-Effects Model. The default <code>method = "auto"</code> routes between the iterative sufficient-statistics estimator (SS) and the one-step communication-efficient surrogate-likelihood estimator (CSL) of Lin and Jalili (2026), based on the problem size.</li>
+<code><a href="../reference/vcmm.html">vcmm()</a></code> is the main entry point: a single call that builds the spline design, computes sufficient statistics, and fits a Varying Coefficient Mixed-Effects Model. The default <code>method = "auto"</code> routes between the iterative sufficient-statistics estimator (SS) and the one-step communication-efficient surrogate-likelihood estimator (CSL) of Jalili and Lin (2025), based on the problem size.</li>
 </ul></div>
 <div class="section level4">
 <h4 id="random-effect-covariance-0-1-0">Random-effect covariance<a class="anchor" aria-label="anchor" href="#random-effect-covariance-0-1-0"></a></h4>
@@ -69,7 +69,7 @@
 <li>
 <code><a href="../reference/init_accumulator.html">init_accumulator()</a></code> plus repeated calls to <code><a href="../reference/accumulate_stats.html">accumulate_stats()</a></code> provides a streaming alternative for chunks that arrive over time.</li>
 <li>
-<code><a href="../reference/fit_from_summaries.html">fit_from_summaries()</a></code> accepts a single summary, a list of summaries, or an accumulator, and returns a fit bit-equivalent to a pooled <code><a href="../reference/vcmm.html">vcmm()</a></code> call on the same data (Theorem 1 of Lin and Jalili, 2026).</li>
+<code><a href="../reference/fit_from_summaries.html">fit_from_summaries()</a></code> accepts a single summary, a list of summaries, or an accumulator, and returns a fit bit-equivalent to a pooled <code><a href="../reference/vcmm.html">vcmm()</a></code> call on the same data (Theorem 1 of Jalili and Lin, 2025).</li>
 <li>For designs with constant <code>rowSums(Z)</code> (e.g. origin-destination indicators), <code><a href="../reference/fit_from_summaries.html">fit_from_summaries()</a></code> takes a <code>rowsum_constant</code> argument so the same identifiability shift <code><a href="../reference/vcmm.html">vcmm()</a></code> applies automatically can be reproduced in the distributed setting.</li>
 </ul></div>
 <div class="section level4">
@@ -106,7 +106,7 @@
 </ul></div>
 <div class="section level3">
 <h3 id="reference-0-1-0">Reference<a class="anchor" aria-label="anchor" href="#reference-0-1-0"></a></h3>
-<p>Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient Varying Coefficient Mixed-Effects Models: Methodology, Theory, and Applications. <em>Journal of the American Statistical Association</em> (under review).</p>
+<p>Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient Varying Coefficient Mixed Effect Models: Methodology, Theory, and Applications. arXiv:2511.12732; under review at <em>Journal of the American Statistical Association</em>.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>

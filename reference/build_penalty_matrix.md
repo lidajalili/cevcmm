@@ -50,7 +50,7 @@ guarantee numerical stability in downstream solves.
 Eilers, P. H. C. and Marx, B. D. (1996). Flexible smoothing with
 B-splines and penalties. *Statistical Science*, 11(2), 89–121.
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 
 ## Examples

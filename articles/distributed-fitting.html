@@ -62,7 +62,7 @@
       <h1>Distributed fitting with cevcmm</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/lidajalili/cevcmm/blob/v0.1.0/vignettes/distributed-fitting.Rmd" class="external-link"><code>vignettes/distributed-fitting.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/lidajalili/cevcmm/blob/main/vignettes/distributed-fitting.Rmd" class="external-link"><code>vignettes/distributed-fitting.Rmd</code></a></small>
       <div class="d-none name"><code>distributed-fitting.Rmd</code></div>
     </div>
 
@@ -92,7 +92,7 @@ computed from the aggregate.</p>
 <div class="section level2">
 <h2 id="the-math-guarantee">The math guarantee<a class="anchor" aria-label="anchor" href="#the-math-guarantee"></a>
 </h2>
-<p>Theorem 1 of Lin and Jalili (2026): partition the data into
+<p>Theorem 1 of Jalili and Lin (2025): partition the data into
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>K</mi><annotation encoding="application/x-tex">K</annotation></semantics></math>
 chunks, compute a sufficient-statistics summary on each chunk, sum the
 summaries, and fit. The result is <strong>bit-equivalent</strong> (up to
@@ -218,7 +218,7 @@ package handles this automatically as long as the inputs agree.)</p>
 <span><span class="co">#&gt;   iterations  : 5 (converged)</span></span>
 <span><span class="co">#&gt;   sigma_eps   : 0.4845</span></span>
 <span><span class="co">#&gt;   sigma_alpha : 0.7251</span></span>
-<span><span class="co">#&gt;   elapsed     : 0.0010 sec</span></span></code></pre></div>
+<span><span class="co">#&gt;   elapsed     : &lt;0.001 sec</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="verify-bit-equivalence-against-pooled-fitting">Verify bit-equivalence against pooled fitting<a class="anchor" aria-label="anchor" href="#verify-bit-equivalence-against-pooled-fitting"></a>
@@ -342,9 +342,10 @@ full OD example.</p>
 <div class="section level2">
 <h2 id="reference">Reference<a class="anchor" aria-label="anchor" href="#reference"></a>
 </h2>
-<p>Lin, L.-H. and Jalili, L. (2026). <em>Scalable and
-Communication-Efficient Varying Coefficient Mixed-Effects Models:
-Methodology, Theory, and Applications.</em> JASA (under review).</p>
+<p>Jalili, L. and Lin, L.-H. (2025). <em>Scalable and
+Communication-Efficient Varying Coefficient Mixed Effect Models:
+Methodology, Theory, and Applications.</em> arXiv:2511.12732; under
+review at <em>Journal of the American Statistical Association</em>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

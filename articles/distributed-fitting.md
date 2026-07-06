@@ -18,7 +18,7 @@ aggregate.
 
 ## The math guarantee
 
-Theorem 1 of Lin and Jalili (2026): partition the data into $`K`$
+Theorem 1 of Jalili and Lin (2025): partition the data into $`K`$
 chunks, compute a sufficient-statistics summary on each chunk, sum the
 summaries, and fit. The result is **bit-equivalent** (up to BLAS
 summation noise) to fitting on the pooled data. The summaries lose no
@@ -150,7 +150,7 @@ fit_dist
 #>   iterations  : 5 (converged)
 #>   sigma_eps   : 0.4845
 #>   sigma_alpha : 0.7251
-#>   elapsed     : 0.0010 sec
+#>   elapsed     : <0.001 sec
 ```
 
 ## Verify bit-equivalence against pooled fitting
@@ -273,6 +273,7 @@ for a full OD example.
 
 ## Reference
 
-Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications.* JASA (under review).
+Jalili, L. and Lin, L.-H. (2025). *Scalable and Communication-Efficient
+Varying Coefficient Mixed Effect Models: Methodology, Theory, and
+Applications.* arXiv:2511.12732; under review at *Journal of the
+American Statistical Association*.

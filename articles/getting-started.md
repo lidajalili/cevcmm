@@ -14,7 +14,7 @@ $`\alpha \sim N(0, \Sigma_\alpha)`$ are random effects with one of three
 covariance structures (`diag`, `kronecker`, `separable`), and
 $`\varepsilon_i \sim N(0, \sigma_\varepsilon^2)`$.
 
-The package implements two estimators from Lin and Jalili (2026):
+The package implements two estimators from Jalili and Lin (2025):
 
 - **SS** (sufficient-statistics): iterates to convergence using only the
   aggregated summary $`(a,\,b,\,C,\,Z^\top Z,\,Z^\top y,\,X^\top Z)`$.
@@ -84,7 +84,7 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5076
 #>   sigma_alpha : 0.6327
-#>   elapsed     : <0.001 sec
+#>   elapsed     : 0.0010 sec
 ```
 
 ## Inspect the fit
@@ -250,6 +250,7 @@ Built-in plot.vcmm_fit panel 1.
 
 ## Reference
 
-Lin, L.-H. and Jalili, L. (2026). *Scalable and Communication-Efficient
-Varying Coefficient Mixed-Effects Models: Methodology, Theory, and
-Applications.* JASA (under review).
+Jalili, L. and Lin, L.-H. (2025). *Scalable and Communication-Efficient
+Varying Coefficient Mixed Effect Models: Methodology, Theory, and
+Applications.* arXiv:2511.12732; under review at *Journal of the
+American Statistical Association*.

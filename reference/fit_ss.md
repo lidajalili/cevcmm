@@ -2,7 +2,7 @@
 
 Iteratively solves for the fixed-effects coefficient vector `beta` and
 the random-effects vector `alpha` using only the aggregated sufficient
-summary, implementing Algorithm 1 of Lin and Jalili (2026) for the
+summary, implementing Algorithm 1 of Jalili and Lin (2025) for the
 normal linear VCMM. The raw response and design matrices are not needed:
 everything reads off `stats`, which may come from a single call to
 [`compute_sufficient_stats()`](https://lidajalili.github.io/cevcmm/reference/compute_sufficient_stats.md)
@@ -106,7 +106,7 @@ random-effect variance is re-estimated as `mean(alpha^2)`.
 
 ## References
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 
 ## Examples

@@ -62,7 +62,7 @@
       <h1>Getting started with cevcmm</h1>
             
       
-      <small class="dont-index">Source: <a href="https://github.com/lidajalili/cevcmm/blob/v0.1.0/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
+      <small class="dont-index">Source: <a href="https://github.com/lidajalili/cevcmm/blob/main/vignettes/getting-started.Rmd" class="external-link"><code>vignettes/getting-started.Rmd</code></a></small>
       <div class="d-none name"><code>getting-started.Rmd</code></div>
     </div>
 
@@ -85,7 +85,7 @@ is a smooth function of
 are random effects with one of three covariance structures
 (<code>diag</code>, <code>kronecker</code>, <code>separable</code>), and
 <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msubsup><mi>σ</mi><mi>ε</mi><mn>2</mn></msubsup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\varepsilon_i \sim N(0, \sigma_\varepsilon^2)</annotation></semantics></math>.</p>
-<p>The package implements two estimators from Lin and Jalili (2026):</p>
+<p>The package implements two estimators from Jalili and Lin (2025):</p>
 <ul>
 <li>
 <strong>SS</strong> (sufficient-statistics): iterates to convergence
@@ -159,7 +159,7 @@ otherwise SS. This small example picks SS.</p>
 <span><span class="co">#&gt;   iterations  : 6 (converged)</span></span>
 <span><span class="co">#&gt;   sigma_eps   : 0.5076</span></span>
 <span><span class="co">#&gt;   sigma_alpha : 0.6327</span></span>
-<span><span class="co">#&gt;   elapsed     : &lt;0.001 sec</span></span></code></pre></div>
+<span><span class="co">#&gt;   elapsed     : 0.0010 sec</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="inspect-the-fit">Inspect the fit<a class="anchor" aria-label="anchor" href="#inspect-the-fit"></a>
@@ -316,9 +316,10 @@ for OD-flow data:
 <div class="section level2">
 <h2 id="reference">Reference<a class="anchor" aria-label="anchor" href="#reference"></a>
 </h2>
-<p>Lin, L.-H. and Jalili, L. (2026). <em>Scalable and
-Communication-Efficient Varying Coefficient Mixed-Effects Models:
-Methodology, Theory, and Applications.</em> JASA (under review).</p>
+<p>Jalili, L. and Lin, L.-H. (2025). <em>Scalable and
+Communication-Efficient Varying Coefficient Mixed Effect Models:
+Methodology, Theory, and Applications.</em> arXiv:2511.12732; under
+review at <em>Journal of the American Statistical Association</em>.</p>
 </div>
   </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
     </nav></aside>

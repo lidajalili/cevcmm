@@ -1,7 +1,7 @@
 # Fit a VCMM from aggregated sufficient-statistics summaries
 
 Server-side fit using only the small per-node summaries; no raw data
-required. The mathematical guarantee (Theorem 1 of Lin and Jalili, 2026)
+required. The mathematical guarantee (Theorem 1 of Jalili and Lin, 2025)
 is that for a fixed partition of the data into nodes, the fit obtained
 here is identical to the one a centralised
 [`vcmm()`](https://lidajalili.github.io/cevcmm/reference/vcmm.md) call
@@ -104,7 +104,7 @@ re-centering" (appropriate for dense-Z and block-Z designs).
 
 ## References
 
-Lin, L.-H. and Jalili, L. (2026). Scalable and Communication-Efficient
+Jalili, L. and Lin, L.-H. (2025). Scalable and Communication-Efficient
 Varying Coefficient Mixed-Effects Models.
 
 ## See also

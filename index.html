@@ -11,9 +11,9 @@
 <script src="deps/bootstrap-5.3.8/bootstrap.bundle.min.js"></script><link href="deps/font-awesome-6.5.2/css/all.min.css" rel="stylesheet">
 <link href="deps/font-awesome-6.5.2/css/v4-shims.min.css" rel="stylesheet">
 <script src="deps/headroom-0.11.0/headroom.min.js"></script><script src="deps/headroom-0.11.0/jQuery.headroom.min.js"></script><script src="deps/bootstrap-toc-1.0.1/bootstrap-toc.min.js"></script><script src="deps/clipboard.js-2.0.11/clipboard.min.js"></script><script src="deps/search-1.0.0/autocomplete.jquery.min.js"></script><script src="deps/search-1.0.0/fuse.min.js"></script><script src="deps/search-1.0.0/mark.min.js"></script><!-- pkgdown --><script src="pkgdown.js"></script><meta property="og:title" content="cevcmm — Communication-Efficient Varying Coefficient Mixed-Effects Models">
-<meta name="description" content="Fits Varying Coefficient Mixed-Effects Models (VCMMs) at scale, including distributed and memory-constrained settings. Implements the sufficient- statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Lin and Jalili (2026).
+<meta name="description" content="Fits Varying Coefficient Mixed-Effects Models (VCMMs) at scale, including distributed and memory-constrained settings. Implements the sufficient- statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Jalili and Lin (2025).
 ">
-<meta property="og:description" content="Fits Varying Coefficient Mixed-Effects Models (VCMMs) at scale, including distributed and memory-constrained settings. Implements the sufficient- statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Lin and Jalili (2026).
+<meta property="og:description" content="Fits Varying Coefficient Mixed-Effects Models (VCMMs) at scale, including distributed and memory-constrained settings. Implements the sufficient- statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Jalili and Lin (2025).
 ">
 </head>
 <body>
@@ -62,7 +62,7 @@
 </h1></div>
 <!-- badges: start -->
 
-<p><strong>cevcmm</strong> fits <strong>Varying Coefficient Mixed-Effects Models (VCMMs)</strong> at scale, including settings where data is split across multiple machines or doesn’t fit in memory. It implements the sufficient-statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Lin and Jalili (2026), with diagonal, Kronecker, and separable random-effect covariance structures.</p>
+<p><strong>cevcmm</strong> fits <strong>Varying Coefficient Mixed-Effects Models (VCMMs)</strong> at scale, including settings where data is split across multiple machines or doesn’t fit in memory. It implements the sufficient-statistics (SS) and one-step communication-efficient surrogate-likelihood (CSL) estimators of Jalili and Lin (2025), with diagonal, Kronecker, and separable random-effect covariance structures.</p>
 <p>The model is</p>
 <p><math display="block" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>y</mi><mi>i</mi></msub><mspace width="0.278em"></mspace><mo>=</mo><mspace width="0.278em"></mspace><msub><mi>β</mi><mn>0</mn></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>t</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><munderover><mo>∑</mo><mrow><mi>k</mi><mo>=</mo><mn>1</mn></mrow><mi>K</mi></munderover><msub><mi>x</mi><mrow><mi>i</mi><mi>k</mi></mrow></msub><mspace width="0.167em"></mspace><msub><mi>β</mi><mi>k</mi></msub><mo stretchy="false" form="prefix">(</mo><msub><mi>t</mi><mi>i</mi></msub><mo stretchy="false" form="postfix">)</mo><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><msubsup><mi>z</mi><mi>i</mi><mi>⊤</mi></msubsup><mi>α</mi><mspace width="0.278em"></mspace><mo>+</mo><mspace width="0.278em"></mspace><msub><mi>ε</mi><mi>i</mi></msub><mo>,</mo></mrow><annotation encoding="application/x-tex">y_i \;=\; \beta_0(t_i) \;+\; \sum_{k=1}^{K} x_{ik}\,\beta_k(t_i) \;+\; z_i^\top \alpha \;+\; \varepsilon_i,</annotation></semantics></math></p>
 <p>where each <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>β</mi><mi>k</mi></msub><mo stretchy="false" form="prefix">(</mo><mi>t</mi><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\beta_k(t)</annotation></semantics></math> is a smooth function of <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mi>t</mi><annotation encoding="application/x-tex">t</annotation></semantics></math> (cubic B-splines with a second-order-difference penalty), <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><mi>α</mi><mo>∼</mo><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msub><mi mathvariant="normal">Σ</mi><mi>α</mi></msub><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\alpha \sim N(0, \Sigma_\alpha)</annotation></semantics></math>, and <math display="inline" xmlns="http://www.w3.org/1998/Math/MathML"><semantics><mrow><msub><mi>ε</mi><mi>i</mi></msub><mo>∼</mo><mi>N</mi><mo stretchy="false" form="prefix">(</mo><mn>0</mn><mo>,</mo><msubsup><mi>σ</mi><mi>ε</mi><mn>2</mn></msubsup><mo stretchy="false" form="postfix">)</mo></mrow><annotation encoding="application/x-tex">\varepsilon_i \sim N(0, \sigma_\varepsilon^2)</annotation></semantics></math>.</p>
@@ -109,7 +109,7 @@
 <span><span class="co">#&gt;   iterations  : 6 (converged)</span></span>
 <span><span class="co">#&gt;   sigma_eps   : 0.5076</span></span>
 <span><span class="co">#&gt;   sigma_alpha : 0.6327</span></span>
-<span><span class="co">#&gt;   elapsed     : 0.0010 sec</span></span></code></pre></div>
+<span><span class="co">#&gt;   elapsed     : &lt;0.001 sec</span></span></code></pre></div>
 <p>All standard S3 methods work on the result: <code><a href="https://rdrr.io/r/stats/coef.html" class="external-link">coef()</a></code>, <code><a href="reference/fixef.html">fixef()</a></code>, <code><a href="reference/ranef.html">ranef()</a></code>, <code><a href="https://rdrr.io/r/stats/vcov.html" class="external-link">vcov()</a></code>, <code><a href="https://rdrr.io/r/stats/nobs.html" class="external-link">nobs()</a></code>, <code><a href="https://rdrr.io/r/stats/logLik.html" class="external-link">logLik()</a></code>, <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">AIC()</a></code>, <code><a href="https://rdrr.io/r/stats/AIC.html" class="external-link">BIC()</a></code>, <code><a href="https://rdrr.io/r/stats/predict.html" class="external-link">predict()</a></code>, <code><a href="https://rdrr.io/r/base/summary.html" class="external-link">summary()</a></code>, and <code><a href="https://rdrr.io/r/graphics/plot.default.html" class="external-link">plot()</a></code>.</p>
 </div>
 <div class="section level2">
@@ -170,16 +170,16 @@
 </h2>
 <p>If you use cevcmm in published work, please cite:</p>
 <blockquote>
-<p>Lin, L.-H. and Jalili, L. (2026). <em>Scalable and Communication-Efficient Varying Coefficient Mixed-Effects Models: Methodology, Theory, and Applications.</em> Journal of the American Statistical Association (under review).</p>
+<p>Jalili, L. and Lin, L.-H. (2025). <em>Scalable and Communication-Efficient Varying Coefficient Mixed Effect Models: Methodology, Theory, and Applications.</em> arXiv:2511.12732; under review at <em>Journal of the American Statistical Association</em>.</p>
 </blockquote>
 <p>BibTeX:</p>
-<div class="sourceCode" id="cb4"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">lin2026cevcmm</span>,</span>
+<div class="sourceCode" id="cb4"><pre class="sourceCode bibtex"><code class="sourceCode bibtex"><span id="cb4-1"><a href="#cb4-1" tabindex="-1"></a><span class="va">@article</span>{<span class="ot">jalili2025cevcmm</span>,</span>
 <span id="cb4-2"><a href="#cb4-2" tabindex="-1"></a>  <span class="dt">title</span>   = {Scalable and Communication-Efficient Varying Coefficient</span>
-<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>             Mixed-Effects Models: Methodology, Theory, and Applications},</span>
-<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="dt">author</span>  = {Lin, Li-Hsiang and Jalili, Lida},</span>
-<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="dt">journal</span> = {Journal of the American Statistical Association},</span>
-<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="dt">year</span>    = {2026},</span>
-<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="dt">note</span>    = {Under review}</span>
+<span id="cb4-3"><a href="#cb4-3" tabindex="-1"></a>             Mixed Effect Models: Methodology, Theory, and Applications},</span>
+<span id="cb4-4"><a href="#cb4-4" tabindex="-1"></a>  <span class="dt">author</span>  = {Jalili, Lida and Lin, Li-Hsiang},</span>
+<span id="cb4-5"><a href="#cb4-5" tabindex="-1"></a>  <span class="dt">journal</span> = {arXiv preprint arXiv:2511.12732},</span>
+<span id="cb4-6"><a href="#cb4-6" tabindex="-1"></a>  <span class="dt">year</span>    = {2025},</span>
+<span id="cb4-7"><a href="#cb4-7" tabindex="-1"></a>  <span class="dt">note</span>    = {Under review at Journal of the American Statistical Association}</span>
 <span id="cb4-8"><a href="#cb4-8" tabindex="-1"></a>}</span></code></pre></div>
 </div>
 <div class="section level2">
