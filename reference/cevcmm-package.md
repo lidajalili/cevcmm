@@ -28,7 +28,7 @@ Applications.
 
 Useful links:
 
-- <https://lidajalili.github.io/cevcmm>
+- <https://lidajalili.github.io/cevcmm/>
 
 - <https://github.com/lidajalili/cevcmm>
 
