@@ -144,7 +144,7 @@ fit
 #>     [0.7649  0.8597]
 #>   OD corr     : 0.8489
 #>   Sigma_spatial: 10 x 10 (G = 10 groups)
-#>   elapsed     : 0.0040 sec (pilot 0.0020s + newton <0.001s)
+#>   elapsed     : 0.0060 sec (pilot 0.0020s + newton 0.0010s)
 ```
 
 ## Interpret the estimated $`\Sigma_{2 \times 2}`$
