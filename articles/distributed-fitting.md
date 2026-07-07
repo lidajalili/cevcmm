@@ -150,7 +150,7 @@ fit_dist
 #>   iterations  : 5 (converged)
 #>   sigma_eps   : 0.4845
 #>   sigma_alpha : 0.7251
-#>   elapsed     : <0.001 sec
+#>   elapsed     : 0.0010 sec
 ```
 
 ## Verify bit-equivalence against pooled fitting
