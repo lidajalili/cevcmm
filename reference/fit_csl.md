@@ -144,7 +144,7 @@ fit
 #>   newton step : 1
 #>   sigma_eps   : 0.5000
 #>   sigma_alpha : 0.5000
-#>   elapsed     : 0.0010 sec (pilot <0.001s + newton <0.001s)
+#>   elapsed     : 0.0020 sec (pilot <0.001s + newton <0.001s)
 
 # Cheapest pilot: single SS step
 fit_one <- fit_csl(stats, P,
