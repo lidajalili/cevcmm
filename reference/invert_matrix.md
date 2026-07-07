@@ -89,5 +89,5 @@ set.seed(1)
 A <- crossprod(matrix(rnorm(50), 10, 5)) + diag(5)
 A_inv <- invert_matrix(A)
 max(abs(A %*% A_inv - diag(5)))  # ~ machine epsilon
-#> [1] 2.220446e-16
+#> [1] 3.330669e-16
 ```

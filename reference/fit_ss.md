@@ -138,7 +138,7 @@ fit
 #>   iterations  : 5 (converged)
 #>   sigma_eps   : 0.5000
 #>   sigma_alpha : 0.5000
-#>   elapsed     : 0.0010 sec
+#>   elapsed     : <0.001 sec
 coef(fit)
 #>     beta_1     beta_2     beta_3     beta_4 
 #>  2.0268439  0.5047267 -0.2624521  0.8393673 
