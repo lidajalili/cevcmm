@@ -1,3 +1,13 @@
+# cevcmm 0.1.1 (2026-07-07)
+
+## Bug fixes
+
+* Add explicit `PKG_LIBS = $(LAPACK_LIBS) $(BLAS_LIBS) $(FLIBS)` to
+  `src/Makevars` for BLAS / LAPACK / Fortran linking on Linux. The
+  equivalent flags were already present in `src/Makevars.win` for
+  Windows. Fixes install failure with `undefined symbol: dpotrf_`
+  on CRAN's Debian pretest.
+  
 # cevcmm 0.1.0 (2026-07-01)
 
 First public release.
