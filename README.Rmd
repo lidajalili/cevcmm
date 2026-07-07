@@ -115,4 +115,4 @@ BibTeX:
 
 ## License
 
-GPL-3. See the [`LICENSE`](LICENSE) file for the full text.
+Released under the GPL (>= 3) license.

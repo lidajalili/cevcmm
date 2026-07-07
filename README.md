@@ -78,7 +78,7 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5076
 #>   sigma_alpha : 0.6327
-#>   elapsed     : <0.001 sec
+#>   elapsed     : 0.0010 sec
 ```
 
 All standard S3 methods work on the result: `coef()`, `fixef()`,
@@ -142,4 +142,4 @@ BibTeX:
 
 ## License
 
-GPL-3. See the [`LICENSE`](LICENSE) file for the full text.
+Released under the GPL (\>= 3) license.
