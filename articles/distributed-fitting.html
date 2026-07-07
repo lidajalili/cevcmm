@@ -218,7 +218,7 @@ package handles this automatically as long as the inputs agree.)</p>
 <span><span class="co">#&gt;   iterations  : 5 (converged)</span></span>
 <span><span class="co">#&gt;   sigma_eps   : 0.4845</span></span>
 <span><span class="co">#&gt;   sigma_alpha : 0.7251</span></span>
-<span><span class="co">#&gt;   elapsed     : 0.0020 sec</span></span></code></pre></div>
+<span><span class="co">#&gt;   elapsed     : 0.0010 sec</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="verify-bit-equivalence-against-pooled-fitting">Verify bit-equivalence against pooled fitting<a class="anchor" aria-label="anchor" href="#verify-bit-equivalence-against-pooled-fitting"></a>
@@ -230,11 +230,11 @@ package handles this automatically as long as the inputs agree.)</p>
 <span></span>
 <span><span class="co"># beta estimates</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_pooled</span><span class="op">$</span><span class="va">beta</span> <span class="op">-</span> <span class="va">fit_dist</span><span class="op">$</span><span class="va">beta</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 1.221245e-14</span></span>
+<span><span class="co">#&gt; [1] 1.065814e-14</span></span>
 <span></span>
 <span><span class="co"># alpha estimates</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Extremes.html" class="external-link">max</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/MathFun.html" class="external-link">abs</a></span><span class="op">(</span><span class="va">fit_pooled</span><span class="op">$</span><span class="va">alpha</span> <span class="op">-</span> <span class="va">fit_dist</span><span class="op">$</span><span class="va">alpha</span><span class="op">)</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] 2.220446e-16</span></span>
+<span><span class="co">#&gt; [1] 4.440892e-16</span></span>
 <span></span>
 <span><span class="co"># variance components</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">fit_pooled</span><span class="op">$</span><span class="va">sigma_eps</span>,   <span class="va">fit_dist</span><span class="op">$</span><span class="va">sigma_eps</span><span class="op">)</span></span>
