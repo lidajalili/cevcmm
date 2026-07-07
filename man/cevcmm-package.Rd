@@ -29,7 +29,7 @@ Applications.
 \seealso{
 Useful links:
 \itemize{
-  \item \url{https://lidajalili.github.io/cevcmm}
+  \item \url{https://lidajalili.github.io/cevcmm/}
   \item \url{https://github.com/lidajalili/cevcmm}
   \item Report bugs at \url{https://github.com/lidajalili/cevcmm/issues}
 }
