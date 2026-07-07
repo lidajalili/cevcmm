@@ -1,6 +1,6 @@
 Package: cevcmm
 Title: Communication-Efficient Varying Coefficient Mixed-Effects Models
-Version: 0.0.0.9000
+Version: 0.1.0
 Authors@R: c(
     person("Lida", "Jalili",
            email = "lchalangarjalilideh1@gsu.edu",
