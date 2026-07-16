@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cevcmm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.1</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.2</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -39,6 +39,18 @@
       <small>Source: <a href="https://github.com/lidajalili/cevcmm/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.2" id="cevcmm-012-2026-07-07">cevcmm 0.1.2 (2026-07-07)<a class="anchor" aria-label="anchor" href="#cevcmm-012-2026-07-07"></a></h2>
+<div class="section level3">
+<h3 id="cran-reviewer-feedback-round-0-1-2">CRAN reviewer feedback (round 1)<a class="anchor" aria-label="anchor" href="#cran-reviewer-feedback-round-0-1-2"></a></h3>
+<p>Addresses comments from CRAN reviewer Konstanze Lauseker on the initial submission of cevcmm 0.1.1.</p>
+<ul><li>DESCRIPTION: expand the “SVD” acronym on first use to “Singular Value Decomposition”.</li>
+<li>DESCRIPTION: reformat the reference to Jalili and Lin (2025) in the CRAN-preferred autolinking form <code>&lt;https://arxiv.org/abs/2511.12732&gt;</code>.</li>
+<li>R/methods.R: add <code>\value</code> sections to the <code>fixef</code> and <code>ranef</code> S3 generic function documentation, describing the return-value contract dispatched to method-specific documentation.</li>
+<li>R/plot.R: change <code>\dontrun{}</code> to <code>\donttest{}</code> in the <code>plot.vcmm_fit</code> example.</li>
+<li>.Rbuildignore: exclude <code>inst/validation</code> and <code>inst/benchmarks</code> from the CRAN tarball. These are development-time scripts (the Day 7-18 validation harness and micro-benchmarks used during package development) that write files and change <code><a href="https://rdrr.io/r/graphics/par.html" class="external-link">par()</a></code> / <code><a href="https://rdrr.io/r/base/options.html" class="external-link">options()</a></code> without resetting. They remain available in the GitHub repository for reference but are no longer shipped to CRAN users.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.1" id="cevcmm-011-2026-07-07">cevcmm 0.1.1 (2026-07-07)<a class="anchor" aria-label="anchor" href="#cevcmm-011-2026-07-07"></a></h2>
 <div class="section level3">
@@ -125,7 +137,7 @@
 </div>
 
 <div class="pkgdown-footer-right">
-  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.0.</p>
+  <p>Site built with <a href="https://pkgdown.r-lib.org/" class="external-link">pkgdown</a> 2.2.1.</p>
 </div>
 
     </footer></div>

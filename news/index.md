@@ -1,5 +1,30 @@
 # Changelog
 
+## cevcmm 0.1.2 (2026-07-07)
+
+### CRAN reviewer feedback (round 1)
+
+Addresses comments from CRAN reviewer Konstanze Lauseker on the initial
+submission of cevcmm 0.1.1.
+
+- DESCRIPTION: expand the “SVD” acronym on first use to “Singular Value
+  Decomposition”.
+- DESCRIPTION: reformat the reference to Jalili and Lin (2025) in the
+  CRAN-preferred autolinking form `<https://arxiv.org/abs/2511.12732>`.
+- R/methods.R: add `\value` sections to the `fixef` and `ranef` S3
+  generic function documentation, describing the return-value contract
+  dispatched to method-specific documentation.
+- R/plot.R: change `\dontrun{}` to `\donttest{}` in the `plot.vcmm_fit`
+  example.
+- .Rbuildignore: exclude `inst/validation` and `inst/benchmarks` from
+  the CRAN tarball. These are development-time scripts (the Day 7-18
+  validation harness and micro-benchmarks used during package
+  development) that write files and change
+  [`par()`](https://rdrr.io/r/graphics/par.html) /
+  [`options()`](https://rdrr.io/r/base/options.html) without resetting.
+  They remain available in the GitHub repository for reference but are
+  no longer shipped to CRAN users.
+
 ## cevcmm 0.1.1 (2026-07-07)
 
 ### Bug fixes

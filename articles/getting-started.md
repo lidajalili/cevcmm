@@ -84,7 +84,7 @@ fit
 #>   iterations  : 6 (converged)
 #>   sigma_eps   : 0.5076
 #>   sigma_alpha : 0.6327
-#>   elapsed     : 0.0010 sec
+#>   elapsed     : 0.0020 sec
 ```
 
 ## Inspect the fit
