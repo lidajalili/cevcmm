@@ -1,3 +1,16 @@
+# cevcmm 0.1.3 (2026-07-16)
+
+## CRAN reviewer feedback (round 2)
+
+Addresses a follow-up NOTE from win-builder R-devel on cevcmm 0.1.2
+asking that arXiv preprints be cited via their arXiv DOI form rather
+than the plain URL form. Metadata-only change; no code changes.
+
+* DESCRIPTION: change the arXiv reference from
+  `<https://arxiv.org/abs/2511.12732>` to
+  `<doi:10.48550/arXiv.2511.12732>`, as required by CRAN policy for
+  arXiv preprints.
+
 # cevcmm 0.1.2 (2026-07-07)
 
 ## CRAN reviewer feedback (round 1)
@@ -8,8 +21,8 @@ initial submission of cevcmm 0.1.1.
 * DESCRIPTION: expand the "SVD" acronym on first use to
   "Singular Value Decomposition".
 * DESCRIPTION: reformat the reference to Jalili and Lin (2025) in
-  the CRAN-preferred autolinking form
-  `<https://arxiv.org/abs/2511.12732>`.
+  the CRAN-preferred autolinking form (later refined to DOI form
+  in 0.1.3).
 * R/methods.R: add `\value` sections to the `fixef` and `ranef` S3
   generic function documentation, describing the return-value
   contract dispatched to method-specific documentation.

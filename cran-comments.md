@@ -1,24 +1,21 @@
 ## Resubmission
 
-This is a resubmission of cevcmm 0.1.2 addressing the five items
-raised by CRAN reviewer Konstanze Lauseker on cevcmm 0.1.1:
+This is a minor metadata-only resubmission of cevcmm 0.1.3 following
+a NOTE from win-builder R-devel on cevcmm 0.1.2 asking that arXiv
+preprints be cited via their arXiv DOI form
+(`<doi:10.48550/arXiv.YYMM.NNNNN>`) rather than the plain URL form
+(`<https://arxiv.org/abs/YYMM.NNNNN>`). Only the DESCRIPTION
+reference was changed; no code or documentation changes.
 
-1. Expanded the "SVD" acronym in the DESCRIPTION as
-   "Singular Value Decomposition".
-2. Reformatted the Jalili and Lin (2025) reference in the
-   CRAN-preferred autolinking form
-   <https://arxiv.org/abs/2511.12732>.
-3. Added `\value` sections to `fixef.Rd` and `ranef.Rd` (the S3
-   generic function documentation), describing the return-value
-   contract dispatched to method-specific documentation.
-4. Changed `\dontrun{}` to `\donttest{}` in the `plot.vcmm_fit`
-   example.
-5. Excluded `inst/validation` and `inst/benchmarks` from the CRAN
-   tarball via `.Rbuildignore`. These development-time scripts
-   were the source of the `par()` / `options()` reset warnings
-   and the `on.exit()` outside of a function. They remain in the
-   GitHub repository for reference but are no longer shipped to
-   CRAN users.
+All five items from CRAN reviewer Konstanze Lauseker's earlier
+feedback on cevcmm 0.1.1 remain addressed as in 0.1.2:
+
+1. "SVD" expanded to "Singular Value Decomposition" in DESCRIPTION.
+2. Paper reference reformatted for autolinking (now in DOI form).
+3. `\value` sections added to `fixef.Rd` and `ranef.Rd`.
+4. `\dontrun{}` changed to `\donttest{}` in `plot.vcmm_fit`.
+5. `inst/validation` and `inst/benchmarks` excluded from the CRAN
+   tarball via `.Rbuildignore`.
 
 ## Test environments
 
@@ -27,7 +24,8 @@ raised by CRAN reviewer Konstanze Lauseker on cevcmm 0.1.1:
   - macOS-latest (release)
   - windows-latest (release)
   - ubuntu-latest (release, devel, oldrel-1)
-* win-builder: R-devel (Status: 1 NOTE, "New submission" only)
+* win-builder: R-devel (Status: 1 NOTE, "New submission" only,
+  after the DOI change)
 
 ## R CMD check results
 
@@ -43,12 +41,11 @@ None (new package).
 
 ## Additional notes for the reviewer
 
-* The package implements the methodology of Jalili and Lin (2025),
-  currently available as an arXiv preprint
-  <https://arxiv.org/abs/2511.12732> and under review at the
-  Journal of the American Statistical Association. The
-  DESCRIPTION and citation entries reflect this status; we will
-  update on acceptance.
+* The paper by Jalili and Lin (2025) is currently available as an
+  arXiv preprint (arXiv:2511.12732, DOI 10.48550/arXiv.2511.12732)
+  and under review at the Journal of the American Statistical
+  Association. The DESCRIPTION reference and package citation
+  will be updated on journal acceptance.
 * The bundled simulated dataset under
   `inst/extdata/od_migration.csv` is approximately 88 KB; we
   considered RDS but kept CSV for human-readable inspection and

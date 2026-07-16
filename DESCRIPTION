@@ -1,6 +1,6 @@
 Package: cevcmm
 Title: Communication-Efficient Varying Coefficient Mixed-Effects Models
-Version: 0.1.2
+Version: 0.1.3
 Authors@R: c(
     person("Lida", "Jalili",
            email = "lchalangarjalilideh1@gsu.edu",
@@ -14,7 +14,7 @@ Description: Scalable inference for Varying Coefficient Mixed-Effects
     likelihood, and SVD-stabilized (Singular Value Decomposition)
     estimators with Kronecker and separable covariance structures.
     Implements the methodology of Jalili and Lin (2025)
-    <https://arxiv.org/abs/2511.12732>.
+    <doi:10.48550/arXiv.2511.12732>.
 License: GPL (>= 3)
 Encoding: UTF-8
 VignetteBuilder: knitr
