@@ -78,7 +78,7 @@
 #' y <- 2 + sin(2 * pi * t) * x + as.vector(Z %*% a) + rnorm(n, sd = 0.5)
 #' fit <- vcmm(y, X = x, Z = Z, t = t,
 #'             control = vcmm_control(sigma_eps = 0.5, sigma_alpha = 0.5))
-#' \dontrun{
+#' \donttest{
 #' plot(fit)                                         # all three panels
 #' plot(fit, which = 1)                              # only varying coefs
 #' plot(fit, which = 2, data = list(y = y, X = x, Z = Z, t = t))

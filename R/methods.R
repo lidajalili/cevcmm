@@ -160,6 +160,12 @@ coef.vcmm_fit <- function(object, ...) {
 #' @param object A model object.
 #' @param ... Method-specific arguments.
 #'
+#' @return The return value depends on the class of \code{object}; see
+#'   the appropriate method (e.g. \code{\link{fixef.vcmm_fit}} for
+#'   \code{vcmm_fit} objects, which returns a two-element list with
+#'   scalar \code{intercept} and a matrix \code{varying} of B-spline
+#'   basis coefficients).
+#'
 #' @export
 fixef <- function(object, ...) {
   UseMethod("fixef")
@@ -220,6 +226,11 @@ fixef.vcmm_fit <- function(object, ...) {
 #'
 #' @param object A model object.
 #' @param ... Method-specific arguments.
+#'
+#' @return The return value depends on the class of \code{object}; see
+#'   the appropriate method (e.g. \code{\link{ranef.vcmm_fit}} for
+#'   \code{vcmm_fit} objects, which returns a numeric vector, matrix,
+#'   or list reshaped to match the fitted \code{re_cov} structure).
 #'
 #' @export
 ranef <- function(object, ...) {

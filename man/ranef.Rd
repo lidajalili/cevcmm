@@ -11,6 +11,12 @@ ranef(object, ...)
 
 \item{...}{Method-specific arguments.}
 }
+\value{
+The return value depends on the class of \code{object}; see
+the appropriate method (e.g. \code{\link{ranef.vcmm_fit}} for
+\code{vcmm_fit} objects, which returns a numeric vector, matrix,
+or list reshaped to match the fitted \code{re_cov} structure).
+}
 \description{
 Generic in the style of \code{nlme::ranef} / \code{lme4::ranef},
 redefined here so \pkg{cevcmm} avoids a hard dependency on either.

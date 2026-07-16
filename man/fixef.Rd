@@ -11,6 +11,13 @@ fixef(object, ...)
 
 \item{...}{Method-specific arguments.}
 }
+\value{
+The return value depends on the class of \code{object}; see
+the appropriate method (e.g. \code{\link{fixef.vcmm_fit}} for
+\code{vcmm_fit} objects, which returns a two-element list with
+scalar \code{intercept} and a matrix \code{varying} of B-spline
+basis coefficients).
+}
 \description{
 Generic in the style of \code{nlme::fixef} / \code{lme4::fixef},
 redefined here so \pkg{cevcmm} avoids a hard dependency on either.

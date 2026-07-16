@@ -15,3 +15,5 @@
 ^pkgdown$
 ^dev$
 ^CRAN-SUBMISSION$
+^inst/validation$
+^inst/benchmarks$
