@@ -2,6 +2,8 @@
 
 ## cevcmm 0.1.3 (2026-07-16)
 
+CRAN release: 2026-07-24
+
 ### CRAN reviewer feedback (round 2)
 
 Addresses a follow-up NOTE from win-builder R-devel on cevcmm 0.1.2
