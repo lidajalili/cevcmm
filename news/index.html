@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">cevcmm</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.3</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">0.1.4</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -36,9 +36,17 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>Changelog</h1>
-      <small>Source: <a href="https://github.com/lidajalili/cevcmm/blob/v0.1.3/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
+      <small>Source: <a href="https://github.com/lidajalili/cevcmm/blob/main/NEWS.md" class="external-link"><code>NEWS.md</code></a></small>
     </div>
 
+    <div class="section level2">
+<h2 class="pkg-version" data-toc-text="0.1.4" id="cevcmm-014-2026-07-25">cevcmm 0.1.4 (2026-07-25)<a class="anchor" aria-label="anchor" href="#cevcmm-014-2026-07-25"></a></h2>
+<div class="section level3">
+<h3 id="bug-fixes-0-1-4">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-0-1-4"></a></h3>
+<ul><li>
+<code>src/compute_sufficient_stats_cpp.cpp</code>: replace <code>std::memcpy</code> on <code>y.memptr()</code> with the <code>arma::mat(arma::vec)</code> copy constructor. When called with an empty vector (<code>n == 0</code>), the previous implementation invoked <code>std::memcpy(NULL, NULL, 0)</code>, which is undefined behavior per the C standard even though no bytes are copied. gcc-UBSAN on the CRAN Fedora tests-gcc-SAN farm reports this as <code>runtime error: null pointer passed as argument 1, which is declared to never be null</code>. The new implementation uses Armadillo’s own copy constructor, which handles the <code>n == 0</code> case internally without dereferencing any pointer. No user-visible behavior change and no numerical change; a defensive fix for a latent memory-safety issue that only triggered in the empty-input edge case exercised by <code>test-defensive-branches.R</code>.</li>
+</ul></div>
+</div>
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.1.3" id="cevcmm-013-2026-07-16">cevcmm 0.1.3 (2026-07-16)<a class="anchor" aria-label="anchor" href="#cevcmm-013-2026-07-16"></a></h2><p class="text-muted">CRAN release: 2026-07-24</p>
 <div class="section level3">

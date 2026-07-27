@@ -1,5 +1,22 @@
 # Changelog
 
+## cevcmm 0.1.4 (2026-07-25)
+
+### Bug fixes
+
+- `src/compute_sufficient_stats_cpp.cpp`: replace `std::memcpy` on
+  `y.memptr()` with the `arma::mat(arma::vec)` copy constructor. When
+  called with an empty vector (`n == 0`), the previous implementation
+  invoked `std::memcpy(NULL, NULL, 0)`, which is undefined behavior per
+  the C standard even though no bytes are copied. gcc-UBSAN on the CRAN
+  Fedora tests-gcc-SAN farm reports this as
+  `runtime error: null pointer passed as argument 1, which is declared to never be null`.
+  The new implementation uses Armadillo’s own copy constructor, which
+  handles the `n == 0` case internally without dereferencing any
+  pointer. No user-visible behavior change and no numerical change; a
+  defensive fix for a latent memory-safety issue that only triggered in
+  the empty-input edge case exercised by `test-defensive-branches.R`.
+
 ## cevcmm 0.1.3 (2026-07-16)
 
 CRAN release: 2026-07-24
