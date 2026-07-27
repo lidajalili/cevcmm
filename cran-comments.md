@@ -1,21 +1,37 @@
 ## Resubmission
 
-This is a minor metadata-only resubmission of cevcmm 0.1.3 following
-a NOTE from win-builder R-devel on cevcmm 0.1.2 asking that arXiv
-preprints be cited via their arXiv DOI form
-(`<doi:10.48550/arXiv.YYMM.NNNNN>`) rather than the plain URL form
-(`<https://arxiv.org/abs/YYMM.NNNNN>`). Only the DESCRIPTION
-reference was changed; no code or documentation changes.
+This is a maintenance release of cevcmm 0.1.4 addressing the
+gcc-UBSAN "additional issue" reported for cevcmm 0.1.3 on the CRAN
+Fedora tests-gcc-SAN farm (2026-07-24):
 
-All five items from CRAN reviewer Konstanze Lauseker's earlier
-feedback on cevcmm 0.1.1 remain addressed as in 0.1.2:
+  compute_sufficient_stats_cpp.cpp:54:14: runtime error:
+    null pointer passed as argument 1, which is declared to
+    never be null
 
-1. "SVD" expanded to "Singular Value Decomposition" in DESCRIPTION.
-2. Paper reference reformatted for autolinking (now in DOI form).
-3. `\value` sections added to `fixef.Rd` and `ranef.Rd`.
-4. `\dontrun{}` changed to `\donttest{}` in `plot.vcmm_fit`.
-5. `inst/validation` and `inst/benchmarks` excluded from the CRAN
-   tarball via `.Rbuildignore`.
+## Root cause
+
+`src/compute_sufficient_stats_cpp.cpp` copied the input response
+vector `y` into an `n x 1` `arma::mat` via
+`std::memcpy(y_mat.memptr(), y.memptr(), n * sizeof(double))`.
+
+When `n == 0` (the empty-input edge case exercised by
+`tests/testthat/test-defensive-branches.R`), an empty `arma::vec`
+returns `NULL` from `.memptr()`. Passing `NULL` to `std::memcpy`
+is undefined behavior per the C standard even when the byte count
+is zero, because `std::memcpy` carries the `nonnull` attribute on
+both pointers. gcc-UBSAN correctly flags this. Most C libraries
+short-circuit the zero-byte case before touching the pointers, so
+the issue is latent on most platforms (all six main CRAN check
+flavors returned OK on 0.1.3) but observable under UBSAN
+instrumentation.
+
+## Fix
+
+Replace the `std::memcpy` call with Armadillo's `arma::mat(arma::vec)`
+copy constructor, which handles the `n == 0` case internally without
+dereferencing any pointer and produces the same `n x 1` matrix for
+all `n > 0`. No user-visible behavior change and no numerical
+change; the fix is purely a memory-safety hardening.
 
 ## Test environments
 
@@ -24,31 +40,16 @@ feedback on cevcmm 0.1.1 remain addressed as in 0.1.2:
   - macOS-latest (release)
   - windows-latest (release)
   - ubuntu-latest (release, devel, oldrel-1)
-* win-builder: R-devel (Status: 1 NOTE, "New submission" only,
-  after the DOI change)
+* win-builder: R-devel (Status: 1 NOTE, unchanged from 0.1.3)
 
 ## R CMD check results
 
 0 errors | 0 warnings | 1 note
 
-* This is a new submission.
 * NOTE flags "Jalili" (maintainer's surname) and "VCMMs"
-  (paper's method acronym) as possibly misspelled.
+  (paper's method acronym) as possibly misspelled. Unchanged
+  from 0.1.3.
 
 ## Downstream dependencies
 
-None (new package).
-
-## Additional notes for the reviewer
-
-* The paper by Jalili and Lin (2025) is currently available as an
-  arXiv preprint (arXiv:2511.12732, DOI 10.48550/arXiv.2511.12732)
-  and under review at the Journal of the American Statistical
-  Association. The DESCRIPTION reference and package citation
-  will be updated on journal acceptance.
-* The bundled simulated dataset under
-  `inst/extdata/od_migration.csv` is approximately 88 KB; we
-  considered RDS but kept CSV for human-readable inspection and
-  to keep the load path explicit in the OD-migration vignette.
-* Vignettes are pre-built; total knit time on the local machine
-  is well under 30 seconds.
+None.

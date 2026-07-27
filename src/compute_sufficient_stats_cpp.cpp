@@ -22,7 +22,6 @@
 
 // [[Rcpp::depends(RcppArmadillo)]]
 #include <RcppArmadillo.h>
-#include <cstring>  // for std::memcpy
 
 //' Sufficient-statistics core in C++
 //'
@@ -48,10 +47,21 @@ Rcpp::List compute_sufficient_stats_cpp(
 
   // R's crossprod(X, y) returns a p x 1 *matrix*. The downstream
   // arithmetic in fit_ss / fit_csl treats b and Zty as matrices (matrix
-  // - matrix product compatibility). Force the same shape by computing
-  // X' (n x 1) instead of X' (n-vec). Copy y into a fresh n x 1 mat.
-  arma::mat y_mat(n, 1);
-  std::memcpy(y_mat.memptr(), y.memptr(), n * sizeof(double));
+  // - matrix product compatibility). Force the same shape by copying
+  // y (an n-vec, i.e. arma::Col<double>) into an n x 1 arma::mat.
+  //
+  // We use Armadillo's own copy constructor rather than std::memcpy
+  // on y.memptr(). When n == 0 the vector's memptr() is NULL, and
+  // std::memcpy(NULL, NULL, 0) is undefined behavior per the C
+  // standard even though nothing is copied. gcc-UBSAN on the CRAN
+  // Fedora tests-gcc-SAN farm reports this as
+  //   runtime error: null pointer passed as argument 1,
+  //   which is declared to never be null
+  // even when the destination copy is zero bytes. Using the
+  // arma::mat(arma::vec) constructor handles the n == 0 case
+  // internally without dereferencing any pointer, and produces the
+  // same n x 1 matrix for all n > 0.
+  const arma::mat y_mat(y);
 
   // Six cross-products. Armadillo dispatches each to BLAS:
   //   X.t() * y_mat  -> dgemv
