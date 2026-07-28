@@ -150,7 +150,7 @@ fit_dist
 #>   iterations  : 5 (converged)
 #>   sigma_eps   : 0.4845
 #>   sigma_alpha : 0.7251
-#>   elapsed     : 0.0020 sec
+#>   elapsed     : 0.0010 sec
 ```
 
 ## Verify bit-equivalence against pooled fitting
@@ -163,11 +163,11 @@ fit_pooled <- vcmm(y, X = x, Z = Z, t = t,
 
 # beta estimates
 max(abs(fit_pooled$beta - fit_dist$beta))
-#> [1] 1.221245e-14
+#> [1] 1.065814e-14
 
 # alpha estimates
 max(abs(fit_pooled$alpha - fit_dist$alpha))
-#> [1] 2.220446e-16
+#> [1] 4.440892e-16
 
 # variance components
 all.equal(fit_pooled$sigma_eps,   fit_dist$sigma_eps)

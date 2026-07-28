@@ -2,6 +2,8 @@
 
 ## cevcmm 0.1.4 (2026-07-25)
 
+CRAN release: 2026-07-27
+
 ### Bug fixes
 
 - `src/compute_sufficient_stats_cpp.cpp`: replace `std::memcpy` on
